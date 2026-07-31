@@ -1,0 +1,10 @@
+# Core runtime requirements (no ML dependencies)
+# Install with: pip install -r requirements.txt
+
+# No mandatory third-party runtime dependencies.
+# AraNorm's light/standard/deep/social_media presets are dependency-free.
+#
+# Optional extras (install what you need):
+#   pip install "aranorm[camel]"   — CAMeL Tools for model-level dialect ID
+#   pip install "aranorm[ml]"      — Transformers + PyTorch for CODA/MSA models
+#   pip install "aranorm[full]"    — All optional integrations

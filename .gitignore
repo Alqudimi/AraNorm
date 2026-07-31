@@ -1,0 +1,92 @@
+# ── Python ─────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# ── Distribution / packaging ───────────────────────────────────────────────────
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# ── Testing ────────────────────────────────────────────────────────────────────
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+htmlcov/
+coverage.xml
+*.cover
+*.py,cover
+nosetests.xml
+test-results.xml
+
+# ── Type checking ──────────────────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# ── Editors ────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Jupyter ────────────────────────────────────────────────────────────────────
+.ipynb_checkpoints
+*.ipynb
+
+# ── Documentation ──────────────────────────────────────────────────────────────
+docs/_build/
+docs/.doctrees/
+site/
+
+# ── Profiling ──────────────────────────────────────────────────────────────────
+*.prof
+*.lprof
+
+# ── Logs ───────────────────────────────────────────────────────────────────────
+*.log
+
+# ── Secrets / local config ────────────────────────────────────────────────────
+.env
+.env.*
+*.pem
+*.key
+
+# ── Replit ─────────────────────────────────────────────────────────────────────
+# Do NOT ignore Replit config files (they're needed for the environment)
+# .replit
+# replit.nix
