@@ -6,14 +6,11 @@ batch filtering API.
 """
 from __future__ import annotations
 
-import pytest
-
 from aranorm.utils.language_detector import (
     LanguageDetector,
     detect_language,
     is_arabic,
 )
-
 
 # ── Label classification ─────────────────────────────────────────────────────
 

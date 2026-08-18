@@ -6,12 +6,9 @@ which were previously untested.
 """
 from __future__ import annotations
 
-import pytest
-
 from aranorm.core.stop_words_registry import StopWordsRegistry
 from aranorm.processors.morphological_stop_processor import MorphologicalStopProcessor
 from aranorm.processors.phrase_stop_processor import PhraseStopProcessor
-
 
 # ── PhraseStopProcessor ──────────────────────────────────────────────────────
 
