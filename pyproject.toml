@@ -4,7 +4,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 [build-system]
-requires = ["setuptools>=77.0", "wheel"]
+requires = ["setuptools>=84.2.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -88,51 +88,51 @@ aranorm = "aranorm.cli:main"
 # need the corresponding capability.
 [project.optional-dependencies]
 # CAMeL Tools — model-based dialect identification (MADAR corpus, >90% accuracy)
-camel = ["camel-tools>=1.5.0"]
+camel = ["camel-tools>=1.5.7"]
 
 # Neural CODA / MSA normalization via HuggingFace Seq2Seq models
 ml = [
-    "transformers>=4.30.0",
-    "torch>=2.0.0",
-    "sentencepiece>=0.1.99",
+    "transformers>=5.20.2",
+    "torch>=2.14.1",
+    "sentencepiece>=0.2.3",
 ]
 
 # Everything (all integrations + all optional libraries)
 full = [
-    "camel-tools>=1.5.0",
-    "pyarabic>=0.6.0",
+    "camel-tools>=1.5.7",
+    "pyarabic>=0.6.15",
     "tnkeeh>=0.0.9",
     "tahdheeb>=0.1.1",
-    "transformers>=4.30.0",
-    "torch>=2.0.0",
-    "sentencepiece>=0.1.99",
-    "emoji>=2.0.0",
-    "regex>=2023.0.0",
-    "tqdm>=4.65.0",
+    "transformers>=5.20.2",
+    "torch>=2.14.1",
+    "sentencepiece>=0.2.3",
+    "emoji>=2.16.0",
+    "regex>=2026.9.29",
+    "tqdm>=4.70.1",
 ]
 
 # Test & quality toolchain (used by CI)
 quality = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "hypothesis>=6.68.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "mypy>=1.0.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "hypothesis>=6.168.5",
+    "black>=26.10.1",
+    "flake8>=7.4.1",
+    "mypy>=2.4.1",
 ]
 
 # Full development environment (quality + packaging + release tooling)
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "hypothesis>=6.68.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "isort>=5.12.0",
-    "mypy>=1.0.0",
-    "build>=1.0.0",
-    "twine>=4.0.0",
-    "pre-commit>=3.0.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "hypothesis>=6.168.5",
+    "black>=26.10.1",
+    "flake8>=7.4.1",
+    "isort>=9.0.2",
+    "mypy>=2.4.1",
+    "build>=1.6.1",
+    "twine>=7.0.0",
+    "pre-commit>=4.6.2",
 ]
 
 # ─── setuptools ───────────────────────────────────────────────────────────────
