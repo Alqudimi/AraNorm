@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-See [SUPPORTED_VERSIONS.md](SUPPORTED_VERSIONS.md) for which versions receive security updates.
+Only the latest released version receives security updates. See the [releases page](https://github.com/Alqudimi/AraNorm/releases) for the current version.
 
 ## Reporting a Vulnerability
 

@@ -1,34 +1,57 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# AraNorm — Production-grade Arabic text normalization
+# Modern PEP 621 / PEP 639 packaging configuration
+# ──────────────────────────────────────────────────────────────────────────────
+
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "aranorm"
 version = "1.15.0"
-description = "Production-grade Arabic text normalization pipeline for Modern Standard Arabic and dialects."
-readme = "README.md"
+description = "Production-grade Arabic text normalization: MSA, dialects, Arabizi, stop words, and 40+ text analyzers — zero mandatory dependencies."
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.9"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
-    { name = "Abdulaziz Alqudimi", email = "alqudimi@example.com" },
+    { name = "Abdulaziz Mohammed Alqudimi", email = "eng7mi@gmail.com" },
 ]
 maintainers = [
-    { name = "Abdulaziz Alqudimi", email = "alqudimi@example.com" },
+    { name = "Abdulaziz Mohammed Alqudimi", email = "eng7mi@gmail.com" },
 ]
 keywords = [
     "arabic",
-    "nlp",
-    "normalization",
-    "dialects",
-    "coda",
-    "arabizi",
-    "text-processing",
     "arabic-nlp",
-    "natural-language-processing",
     "arabic-text",
+    "nlp",
+    "natural-language-processing",
+    "normalization",
+    "text-normalization",
+    "text-processing",
+    "text-cleaning",
+    "dialects",
+    "arabic-dialects",
+    "dialect-identification",
+    "coda",
+    "msa",
+    "arabizi",
+    "stop-words",
+    "stopwords",
+    "text-analysis",
+    "sentiment-analysis",
+    "keyword-extraction",
+    "readability",
+    "tokenizer",
+    "stemming",
+    "preprocessing",
+    "machine-learning",
+    "linguistics",
+    "computational-linguistics",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Natural Language :: Arabic",
@@ -41,6 +64,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
     "Topic :: Text Processing :: Linguistic",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
@@ -51,26 +75,29 @@ dependencies = []
 Homepage = "https://github.com/Alqudimi/AraNorm"
 Repository = "https://github.com/Alqudimi/AraNorm"
 "Bug Tracker" = "https://github.com/Alqudimi/AraNorm/issues"
-Documentation = "https://github.com/Alqudimi/AraNorm/blob/main/docs/API.md"
+Documentation = "https://github.com/Alqudimi/AraNorm/tree/main/docs"
 Changelog = "https://github.com/Alqudimi/AraNorm/blob/main/CHANGELOG.md"
+"Release Notes" = "https://github.com/Alqudimi/AraNorm/releases"
 
 [project.scripts]
 aranorm = "aranorm.cli:main"
 
+# ─── Optional dependencies ────────────────────────────────────────────────────
+# The core library (light / standard / deep / social_media presets) is fully
+# functional with ZERO third-party dependencies. Install an extra only when you
+# need the corresponding capability.
 [project.optional-dependencies]
+# CAMeL Tools — model-based dialect identification (MADAR corpus, >90% accuracy)
 camel = ["camel-tools>=1.5.0"]
+
+# Neural CODA / MSA normalization via HuggingFace Seq2Seq models
 ml = [
     "transformers>=4.30.0",
     "torch>=2.0.0",
     "sentencepiece>=0.1.99",
 ]
-quality = [
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "mypy>=1.0.0",
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-]
+
+# Everything (all integrations + all optional libraries)
 full = [
     "camel-tools>=1.5.0",
     "pyarabic>=0.6.0",
@@ -83,17 +110,32 @@ full = [
     "regex>=2023.0.0",
     "tqdm>=4.65.0",
 ]
-dev = [
+
+# Test & quality toolchain (used by CI)
+quality = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "hypothesis>=6.68.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
     "mypy>=1.0.0",
+]
+
+# Full development environment (quality + packaging + release tooling)
+dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "hypothesis>=6.68.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
     "build>=1.0.0",
     "twine>=4.0.0",
     "pre-commit>=3.0.0",
 ]
 
+# ─── setuptools ───────────────────────────────────────────────────────────────
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -133,7 +175,7 @@ exclude_lines = [
 # ─── black ────────────────────────────────────────────────────────────────────
 [tool.black]
 line-length = 120
-target-version = ["py39", "py310", "py311", "py312"]
+target-version = ["py39", "py310", "py311", "py312", "py313"]
 skip-string-normalization = false
 
 # ─── isort ────────────────────────────────────────────────────────────────────
@@ -150,6 +192,3 @@ no_implicit_optional = true
 warn_return_any = true
 warn_unused_ignores = false
 ignore_missing_imports = true
-
-# ─── flake8 (in setup.cfg for compatibility) ──────────────────────────────────
-# See setup.cfg or .flake8 for flake8 config

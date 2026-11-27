@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to AraNorm! This document explains how to set up your development environment, submit changes, and follow the project's standards.
 
+شكراً لاهتمامك بالمساهمة في AraNorm! يشرح هذا المستند كيفية تهيئة بيئة التطوير، وتقديم التغييرات، واتباع معايير المشروع.
+
 ---
 
 ## Table of Contents
@@ -15,6 +17,7 @@ Thank you for your interest in contributing to AraNorm! This document explains h
 7. [Submitting a Pull Request](#submitting-a-pull-request)
 8. [Reporting Bugs](#reporting-bugs)
 9. [Requesting Features](#requesting-features)
+10. [Releasing](#releasing)
 
 ---
 
@@ -44,7 +47,7 @@ cd AraNorm
 
 ```bash
 # Install the package in editable mode with all dev dependencies
-pip install -e ".[dev,quality]"
+pip install -e ".[dev]"
 
 # Install pre-commit hooks
 pre-commit install
@@ -93,24 +96,21 @@ python -m pytest tests/test_pipeline.py -v
 python -m pytest -m "not slow"
 ```
 
-Target: **≥ 90% coverage** on all new code.
+Target: **≥ 90% coverage** on all new code. The suite includes contract, property-based (Hypothesis), concurrency, CLI, and packaging smoke tests — new features should extend the matching suites.
 
 ---
 
 ## Code Quality
 
 ```bash
-# Format
-black src/ tests/
+# Everything in one command
+make verify
 
-# Sort imports
-isort src/ tests/
-
-# Lint
-flake8 src/ tests/
-
-# Type-check
-mypy src/aranorm/
+# Or individually:
+black src/ tests/ --line-length=120   # format
+isort src/ tests/                     # sort imports
+flake8 src/ tests/                    # lint
+mypy src/                             # type-check
 ```
 
 All checks must pass before a PR can be merged. The CI pipeline enforces this.
@@ -122,7 +122,7 @@ All checks must pass before a PR can be merged. The CI pipeline enforces this.
 - Type hints: **required** on all public functions and methods
 - No breaking changes without a deprecation notice and major version bump
 
-See [STYLE_GUIDE.md](STYLE_GUIDE.md) for the complete style reference.
+See the [style guide](docs/style-guide.md) for the complete style reference.
 
 ---
 
@@ -143,7 +143,7 @@ PRs that add new processors, analysis components, or integrations must include:
 
 ## Reporting Bugs
 
-Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml) and include:
+Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md) and include:
 - AraNorm version (`aranorm version`)
 - Python version
 - Minimal reproducible example
@@ -153,5 +153,23 @@ Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml) and include
 
 ## Requesting Features
 
-Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml).
+Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.md).
 Describe the use-case before proposing implementation details.
+
+---
+
+## Releasing
+
+Releases are automated via the [`release.yml`](.github/workflows/release.yml) workflow (PyPI Trusted Publishing — no tokens or secrets required):
+
+1. Update `version` in `pyproject.toml`, `src/aranorm/__init__.py`, and `CHANGELOG.md`.
+2. Merge to `main` and wait for the Quality workflow to pass.
+3. Tag and push:
+   ```bash
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+4. The workflow builds sdist + wheel, validates metadata, runs installed-artifact smoke tests, publishes to PyPI, and creates the GitHub Release with artifacts.
+
+One-time setup for the maintainer: register the trusted publisher at
+<https://pypi.org/manage/account/publishing/> (project `aranorm`, owner `Alqudimi`, repo `AraNorm`, workflow `release.yml`, environment `pypi`) and create a `pypi` environment in the repository settings.

@@ -483,12 +483,14 @@ def test_cli_serve_without_server_module(capsys: pytest.CaptureFixture[str]) -> 
 def test_cli_main_module_entry_point() -> None:
     """``python -m aranorm.cli`` must invoke ``main()`` and exit with its code."""
     import subprocess
+    from pathlib import Path
 
+    src_dir = str(Path(__file__).resolve().parent.parent / "src")
     result = subprocess.run(
         ["python3", "-m", "aranorm.cli"],
         capture_output=True,
         text=True,
-        cwd="/home/ubuntu/AraNorm/src",
+        cwd=src_dir,
     )
     assert result.returncode == 2
     assert "usage" in result.stderr.lower()

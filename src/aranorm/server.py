@@ -254,11 +254,12 @@ class ConfigReloadWatcher:
         self._reload = reload or runtime.reload_from_file
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, name="aranorm-config-reloader", daemon=True)
-        self._last_mtime: Optional[int]
+        self._last_signature: Optional[Tuple[int, int]]
         try:
-            self._last_mtime = os.stat(self.path).st_mtime_ns
+            stat_result = os.stat(self.path)
+            self._last_signature = (stat_result.st_mtime_ns, stat_result.st_size)
         except OSError:
-            self._last_mtime = None
+            self._last_signature = None
 
     def start(self) -> None:
         """Start the daemon watcher."""
@@ -272,12 +273,16 @@ class ConfigReloadWatcher:
     def _run(self) -> None:
         while not self._stop.wait(self.interval):
             try:
-                mtime = os.stat(self.path).st_mtime_ns
+                stat_result = os.stat(self.path)
+                signature = (stat_result.st_mtime_ns, stat_result.st_size)
             except OSError:
                 continue
-            if mtime == self._last_mtime:
+            # Compare (mtime, size): filesystems with coarse mtime granularity can
+            # report identical nanosecond timestamps for consecutive writes, so the
+            # size acts as a second change signal for same-tick rewrites.
+            if signature == self._last_signature:
                 continue
-            self._last_mtime = mtime
+            self._last_signature = signature
             outcome = self._reload(self.path)
             if not outcome.success:
                 LOGGER.error("configuration reload failed: %s", outcome.error_message or "unknown error")

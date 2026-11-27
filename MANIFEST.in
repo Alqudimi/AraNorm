@@ -1,0 +1,40 @@
+# MANIFEST.in — extra files included in the source distribution (sdist)
+# The wheel only ships src/aranorm (code + data); the sdist additionally
+# ships everything needed to develop, test, and verify the package.
+
+# Package sources (setuptools picks these up automatically, kept for clarity)
+graft src
+
+# Tests and fixtures
+graft tests
+
+# Documentation and examples
+graft docs
+graft examples
+
+# Developer scripts
+graft scripts
+
+# Project metadata and configuration files
+include LICENSE
+include README.md
+include CHANGELOG.md
+include CONTRIBUTING.md
+include SECURITY.md
+include CODE_OF_CONDUCT.md
+include CITATION.cff
+include Makefile
+include pyproject.toml
+include setup.cfg
+include .editorconfig
+include .gitattributes
+include .gitignore
+include .pre-commit-config.yaml
+
+# GitHub community files (workflows power CI and trusted publishing)
+graft .github
+
+# Keep build artifacts and caches out of the distribution
+global-exclude __pycache__ *.py[cod] *.egg-info .DS_Store
+prune dist
+prune build

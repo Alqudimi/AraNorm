@@ -1,492 +1,96 @@
+<div align="center">
+
 # AraNorm
 
-**مكتبة Python الاحترافية لتطبيع النصوص العربية بجميع لهجاتها**
+**مكتبة بايثون احترافية شاملة لتطبيع النصوص العربية — فصحى ولهجات وعربيزي**
+**Production-grade Arabic text normalization — MSA, dialects, Arabizi & 45+ analyzers**
 
-> Production-grade Arabic text normalization for MSA, dialects, social media, and Arabizi.
+[![PyPI version](https://img.shields.io/pypi/v/aranorm.svg)](https://pypi.org/project/aranorm/)
+[![Python versions](https://img.shields.io/pypi/pyversions/aranorm.svg)](https://pypi.org/project/aranorm/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-2300%2B-passing.svg)](tests/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                ArabicNormalizationPipeline                   │
-├─────────────────────────────────────────────────────────────┤
-│  ContentCleaner  →  OrthographicNormalizer  →  DialectProc  │
-│  (URLs, HTML,       (alef, hamza, diacritics,  (identify,   │
-│   emojis, ...)       tatweel, digits, ...)      CODA, MSA)  │
-└─────────────────────────────────────────────────────────────┘
-```
+[التثبيت](#-التثبيت--installation) · [البدء السريع](#-البدء السريع--quick-start) · [التوثيق](docs/) · [CLI](#-واجهة-السطر-الأوامر--command-line) · [المساهمة](CONTRIBUTING.md)
 
----
-
-## لماذا AraNorm؟
-
-يعاني كل مشروع عربي NLP من نفس المشكلة: تجميع مكتبات متعددة (CAMeL Tools + PyArabic + tnkeeh...) بواجهات مختلفة ونتائج متناقضة. AraNorm تحل هذه المشكلة بواجهة برمجية واحدة نظيفة.
-
-| الميزة                                        | AraNorm core | Optional Extra              |
-|-----------------------------------------------|-----------|-----------------------------|
-| Unicode + alef + hamza + taa marbuta + digits | ✅        | —                           |
-| تشكيل + كشيدة + تطويل + ترقيم + مسافات        | ✅        | —                           |
-| URLs + emails + mentions + hashtags + HTML    | ✅        | —                           |
-| Emoji removal                                 | ✅        | —                           |
-| Twitter / WhatsApp / Chat normalizers         | ✅        | —                           |
-| Arabizi → Arabic conversion                   | ✅        | —                           |
-| Repeated chars reduction (يااا→يا)            | ✅        | —                           |
-| تحديد اللهجة (heuristic)                      | ✅        | CAMeL Tools (`[camel]`)     |
-| تحديد اللهجة >90% (MADAR corpus)              | —         | CAMeL Tools                 |
-| CODA/MSA تطبيع عصبي                           | —         | Transformers (`[ml]`)        |
-| التحليل الصرفي                                | Adapter   | Farasa / Qalsadi / CAMeL    |
-
-### مقارنة مع المكتبات الأخرى
-
-| المكتبة      | Pipeline | لهجات | Arabizi | Platform | Batch | No-ML core |
-|-------------|:--------:|:------:|:--------:|:--------:|:-----:|:----------:|
-| **AraNorm** | ✅       | ✅ 8+  | ✅       | ✅       | ✅    | ✅         |
-| CAMeL Tools | ❌       | ✅     | ❌       | ❌       | ❌    | ❌         |
-| PyArabic    | ❌       | ❌     | ❌       | ❌       | ❌    | ✅         |
-| tnkeeh      | ❌       | ❌     | ❌       | ❌       | ❌    | ✅         |
+</div>
 
 ---
 
-## التثبيت
+**English** — AraNorm is a production-grade, dependency-free Arabic text normalization library for Python. It unifies orthographic normalization, dialect handling, Arabizi transliteration, stop-word processing, and 45+ linguistic analyzers behind one clean, typed, thoroughly tested API — replacing the usual pile of incompatible tools (PyArabic + CAMeL Tools + tnkeeh + custom regexes) with a single import.
+
+**العربية** — AraNorm مكتبة بايثون احترافية لتطبيع النصوص العربية بلا أي تبعيات إلزامية. توحّد المكتبة التطبيع الإملائي، ومعالجة اللهجات، وتحويل العربيزي، ومعالجة الكلمات الوقفية، وأكثر من 45 محللاً لغوياً — خلف واجهة برمجية واحدة نظيفة ومُوثّقة الأنواع ومختبَرة باختبارات تتجاوز 2300 اختبار، لتستغني عن عدة مكتبات متفرقة وغير متوافقة.
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                  ArabicNormalizationPipeline                   │
+├────────────────────────────────────────────────────────────────┤
+│  ContentCleaner   →   OrthographicNormalizer   →  DialectProc  │
+│  (URLs, HTML,         (alef, hamza, diacritics,   (identify,   │
+│   emojis, mentions,    tatweel, digits,            CODA, MSA)  │
+│   hashtags, ...)       punctuation, ...)                       │
+├────────────────────────────────────────────────────────────────┤
+│            StopWordsStage  ·  45+ Analyzers  ·  CLI            │
+└────────────────────────────────────────────────────────────────┘
+```
+
+## ✨ المزايا الرئيسية | Key Features
+
+| | الميزة | Feature |
+|---|---|---|
+| 🚀 | **صفر تبعيات إلزامية** — النواة تعمل ببايثون القياسي فقط | **Zero mandatory dependencies** — pure standard-library core |
+| 🔤 | تطبيع إملائي كامل: الألف، الهمزة، التاء المربوطة، التشكيل، الكشيدة، الأرقام، الترقيم | Full orthographic normalization: alef, hamza, taa marbuta, diacritics, tatweel, digits, punctuation |
+| 🗣️ | تحديد اللهجة heuristically لعشر مناطق (مصر، خليج، شام، عراق، مغارب، يمن، سودان...) | Heuristic dialect identification for 10 regions |
+| 🔄 | تحويل العربيزي إلى عربية (2na → أنا، 3nd → عند) | Arabizi → Arabic transliteration |
+| 🛑 | منظومة كلمات وقفية متقدمة: 8 لهجات + نطاقات + سياق + مجالات | Advanced stop-words engine: 8 dialects + scopes + context + domains |
+| 📊 | 45+ محللاً: مشاعر، مشاعر ثمانية، جودة، مقروئية، ترابط، أسلوب، جناس، سجع، طباق... | 45+ analyzers: sentiment, emotions, quality, readability, coherence, style, wordplay... |
+| ⚡ | معالجة دفعات متوازية + بث تدفقي قابل للاستئناف بنقاط تفتيش | Parallel batch processing + resumable streaming with checkpoints |
+| 🖥️ | واجهة سطر أوامر بـ 43 أمراً + خادم HTTP مدمج | 43-command CLI + built-in HTTP server |
+| 🧩 | تكاملات جاهزة: pandas، scikit-learn، spaCy، NLTK، HuggingFace | Ready integrations: pandas, scikit-learn, spaCy, NLTK, HuggingFace |
+| 🔒 | شامل الأنواع (`py.typed`) + اختبارات عقود صارمة | Fully typed (`py.typed`) + strict contract testing |
+
+## 📦 التثبيت | Installation
 
 ```bash
 pip install aranorm
 ```
 
-تبعيات اختيارية:
+التبعيات الاختيارية | Optional extras:
 
 ```bash
-pip install "aranorm[camel]"   # CAMeL Tools — dialect ID بدقة >90%
-pip install "aranorm[ml]"      # Transformers + PyTorch — نماذج CODA/MSA
-pip install "aranorm[full]"    # كل شيء
+pip install "aranorm[camel]"   # CAMeL Tools — تحديد لهجة بالنموذج (دقة >90%) على MADAR
+pip install "aranorm[ml]"      # Transformers + PyTorch — تطبيع CODA/MSA عصبي
+pip install "aranorm[full]"    # كل شيء | everything
 ```
 
----
+> **ملاحظة | Note** — النواة الكاملة (جميع الـ presets، الكلمات الوقفية، المحللات، الـ CLI، الخادم) تعمل بدون أي تبعية خارجية. التبعيات الاختيارية فقط لقدرات إضافية متخصصة.
+> The complete core (all presets, stop words, analyzers, CLI, server) works with **zero** third-party dependencies. Extras only unlock specialized capabilities.
 
-## الاستخدام السريع
+## 🚀 البدء السريع | Quick Start
 
-### Preset جاهز
+### 1) التطبيع الأساسي | Basic normalization
 
 ```python
 from aranorm import ArabicNormalizationPipeline, PipelineConfig
 
 config = PipelineConfig(
-    preset="standard",       # "light" | "standard" | "deep" | "social_media"
-    dialect_target="coda",   # "none"  | "coda"    | "msa"
+    preset="standard",        # "light" | "standard" | "deep" | "social_media"
+    dialect_target="coda",    # "none" | "coda" | "msa"
     remove_diacritics=True,
     normalize_hamza=True,
     handle_arabizi=True,
 )
 
 pipeline = ArabicNormalizationPipeline(config)
-result = pipeline.process("أهـــلاً شلونك؟ https://t.co/abc 😊")
+result = pipeline.process("أهـــلاً شلونك حبيبي؟ https://t.co/abc 😊")
 
-print(result.normalized_text)      # → "اهلا شلونك؟"
-print(result.dialect)              # → "GLF"
-print(result.dialect_confidence)   # → 0.75
-print(result.coda_text)            # → "أهلاً كيف حالك؟"
-print(result.is_msa)               # → False
-print(result.applied_steps)        # → ['remove_urls', 'normalize_alef', ...]
-
-# Optional operational trace; omitted by default for backward compatibility
-traced = ArabicNormalizationPipeline(
-    PipelineConfig(preset="standard", emit_steps_trace=True)
-).process("أهلاً وسهلاً")
-print(traced.steps_trace)           # → [('ContentCleaner', '...'), ...]
+print(result.normalized_text)   # اهلا شلونك حبيبي?
+print(result.dialect)           # GLF
+print(result.dialect_confidence)
+print(result.applied_steps)     # every applied processor, in order
 ```
 
-### Builder Pattern (مخصص بالكامل)
-
-```python
-pipeline = (
-    ArabicNormalizationPipeline.builder()
-    .add_cleaner(remove_urls=True, remove_emojis=True)
-    .add_normalizer(
-        normalize_alef=True,
-        normalize_hamza=True,
-        normalize_diacritics=True,
-        normalize_tatweel=True,
-    )
-    .add_dialect_processor(
-        identify=True,
-        normalize_to="coda",
-        supported_dialects=["EGY", "GLF", "LEV", "NOR"],
-    )
-    .build()
-)
-```
-
-### معالجة دفعية
-
-```python
-texts = ["نص1", "نص2", "نص3"]
-results = pipeline.process_batch(texts, batch_size=32, n_workers=4)
-for r in results:
-    print(r.normalized_text, r.dialect)
-```
-
-### إعادة معالجة الدفعات الفاشلة
-
-يوفر المسار `process_batch_retry()` تقريرًا typed ومحدودًا لإعادة معالجة العناصر الفاشلة فقط، مع الحفاظ على ترتيب الإدخال وتسجيل الفشل النهائي دون تسريب النصوص داخل ملخص التقرير. ويكافئه المسار `process_batch_retry_async()` في التطبيقات غير المتزامنة.
-
-```python
-from aranorm import BatchRetryPolicy
-
-report = pipeline.process_batch_retry(
-    texts,
-    retry_policy=BatchRetryPolicy(max_retries=2, backoff_seconds=0.0),
-)
-print(report.results)
-print(report.failed_indices, report.recovered_count)
-
-async_report = await pipeline.process_batch_retry_async(
-    texts,
-    retry_policy=BatchRetryPolicy(max_retries=2),
-)
-```
-
-القيمة `max_retries=0` صالحة ومفيدة للتشغيل التشخيصي؛ فهي تسجل الإخفاقات الأولية دون إعادة محاولة. أما في CLI، فخيار `--retry` متاح للدفعات المحدودة، بينما يبقى غير متوافق مع `--stream` لتجنب فقدان envelope التقرير.
-
-### معالجة متدفقة للملفات الكبيرة
-
-عند التعامل مع ملفات ضخمة، استخدم `process_iter()` أو خيار `--stream` حتى تُعالج المدخلات على دفعات محدودة بدل تحميل الملف كاملًا في الذاكرة. يحافظ المسار المتدفق على ترتيب السجلات ويدعم التوازي والتصدير التدريجي إلى JSONL أو JSON أو CSV.
-
-```python
-from aranorm import ArabicNormalizationPipeline, PipelineConfig
-
-pipeline = ArabicNormalizationPipeline(PipelineConfig(preset="light"))
-with open("texts.txt", encoding="utf-8") as source:
-    results = pipeline.process_iter(source, batch_size=256, n_workers=4)
-    for result in results:
-        print(result.normalized_text)
-```
-
-ومن الطرفية:
-
-```bash
-aranorm batch --file texts.txt --output normalized.jsonl \\
-  --stream --batch-size 256 --workers 4 --format jsonl
-```
-
-يحسب أمر CLI عدد الأسطر غير الفارغة للتحقق من الملف الفارغ وتغذية مؤشر التقدم، مع بقاء استهلاك الذاكرة متناسبًا مع حجم الدفعة لا حجم الملف. ويمكن استخدام `--skip-errors` لتجاوز السجلات الفاشلة مع إصدار تحذير لكل سجل بدل إيقاف العملية كاملة.
-
-### جلسة متدفقة قابلة للاستئناف
-
-للمعالجة التشغيلية التي تحتاج إلى استئناف آمن بعد انقطاع العملية، توفر AraNorm عقد `StreamingSession`. يقرأ العقد ملف UTF-8 كسجل واحد في كل سطر، ويكتب نتائج JSONL تدريجيًا، ثم يحفظ `StreamCheckpoint` ذريًا بعد كل دفعة. لا يعيد الاستئناف قبول checkpoint إلا إذا تطابقت مسارات المصدر والخرج، وبصمة SHA-256 للمصدر، وبصمة إعداد pipeline.
-
-```python
-from aranorm import ArabicNormalizationPipeline, StreamingSession
-
-pipeline = ArabicNormalizationPipeline.from_preset("light")
-session = StreamingSession(
-    pipeline,
-    "texts.txt",
-    "normalized.jsonl",
-    "normalized.checkpoint.json",
-    batch_size=256,
-    n_workers=4,
-    lock_enabled=True,  # optional local advisory lock; useful for schedulers
-)
-report = session.run(resume=True)
-print(report.completed, report.processed_count, report.next_index)
-```
-
-يُنشئ العقد مجلدات الخرج والـcheckpoint عند الحاجة، ويمنع تجاوز حجم المصدر المحدد في `max_input_bytes`. يتحقق أيضًا من أن المصدر والخرج والـcheckpoint مسارات مختلفة وليست aliases أو symlinks للملف نفسه. عند تفعيل `lock_enabled=True` يُنشأ قفل advisory محلي بجانب checkpoint، ويُرفض التشغيل المتوازي بعقد `StreamingSessionConflictError` بدل الكتابة المتنافسة. كما يراقب العقد هوية المصدر أثناء التشغيل ويرفع `StreamingSourceChangedError` إذا تغيّر المصدر، ويترك checkpoint السابق صالحًا للاستئناف الآمن. ويمكن تمرير `CancellationToken` للإلغاء التعاوني؛ عندها يحفظ التقرير والـcheckpoint تقدّمًا قابلًا للاستئناف بدل حذف النتائج السابقة. ومن الطرفية:
-
-```bash
-aranorm stream run --source texts.txt --output normalized.jsonl \\
-  --checkpoint normalized.checkpoint.json --batch-size 256 --workers 4 --json
-aranorm stream resume --source texts.txt --output normalized.jsonl \\
-  --checkpoint normalized.checkpoint.json --lock --json
-aranorm stream status --checkpoint normalized.checkpoint.json --json
-```
-
-يحتوي checkpoint على `schema_version` و`next_index` و`output_bytes` و`input_count` وحالتي `completed` والبصمتين. لا تعدّل هذا الملف يدويًا؛ فالتحميل والتحقق يرفضان الحقول الزائدة، الإصدارات غير المدعومة، البصمات غير الصحيحة، والملفات التي تتجاوز الحد الدفاعي. يضيف خيار CLI `--lock` قفلًا محليًا اختياريًا، بينما يبقي API الافتراضي القفل معطلًا للتوافق الخلفي؛ استخدمه مع scheduler أو worker واحد لكل tuple من الملفات.
-
-### الإلغاء التعاوني وحماية الموارد
-
-للتطبيقات طويلة التشغيل، توفر AraNorm عقد `CancellationToken` آمنًا للتزامن. الإلغاء تعاوني: لا تُلغى خيوط العمل قسرًا، بل يتوقف إدخال العمل الجديد واستهلاك النتائج عند أقرب حد آمن مع رفع `ProcessingCancelledError`.
-
-```python
-from aranorm import (
-    ArabicNormalizationPipeline,
-    CancellationToken,
-    PipelineConfig,
-    ResourceLimits,
-)
-
-pipeline = ArabicNormalizationPipeline(
-    PipelineConfig(
-        resource_limits=ResourceLimits(
-            max_text_length=1_000_000,
-            max_batch_size=10_000,
-            max_workers=8,
-        )
-    )
-)
-token = CancellationToken()
-
-for result in pipeline.process_iter(texts, batch_size=256, cancellation_token=token):
-    if shutdown_requested():
-        token.cancel()
-    consume(result)
-```
-
-يمكن استخدام `BatchProcessingPolicy("collect")` لجمع أخطاء الدفعة، و`BatchRetryPolicy` لإعادة المحاولة بحدود معلنة، و`PipelineHooks` لمراقبة دورة الحياة، و`ProcessingMetrics` للحصول على counters آمنة للتزامن. تبقى جميع هذه العقود اختيارية، ويحافظ الاستخدام الافتراضي على السلوك السابق.
-
-### التشخيص التشغيلي وبصمة الإعداد
-
-لإدراج pipeline في سجلات النشر أو فحوص الجاهزية دون كشف النصوص المعالجة، توفر AraNorm بصمة ثابتة للإعداد ووصفًا تشغيليًا versioned:
-
-```python
-pipeline = ArabicNormalizationPipeline.from_preset("deep")
-print(pipeline.configuration_fingerprint())
-print(pipeline.describe_operational())
-```
-
-تُحسب البصمة من الإعداد الفعلي بصيغة JSON canonical وSHA-256، بينما يحتوي `describe_operational()` على اسم الفئة وإصدار الحزمة ونسخة schema وmetadata منقّحة. كما يمكن الحصول على نفس البيانات من الطرفية:
-
-```bash
-aranorm describe --preset deep --json
-aranorm normalize "نص تجريبي" --json --emit-steps-trace
-aranorm batch --file texts.txt --format json --output results.json --retry --max-retries 3 --emit-steps-trace
-```
-
-لا تتضمن هذه الواجهات النص الأصلي أو الناتج أو أي محتوى مستخدم، ولذلك تصلح للتشخيص ومقارنة إعدادات البيئات بأمان.
-
-### PipelineSpec وإعادة البناء الآمن
-
-توفر AraNorm عقد `PipelineSpec` بصيغة JSON versioned لحفظ إعدادات pipeline القابلة لإعادة البناء، مع `config_fingerprint` حتمي والتحقق من schema والحقول والحد الأقصى لحجم الملف. تكتب المواصفة الملفات ذريًا، وتبقي metadata التشخيصية منفصلة عن إعدادات التشغيل.
-
-```python
-from aranorm import ArabicNormalizationPipeline
-from aranorm.core.spec import PipelineSpec
-
-pipeline = ArabicNormalizationPipeline.from_preset("deep")
-spec = pipeline.to_spec(metadata={"owner": "nlp-platform"})
-spec.write_file("pipeline.spec.json")
-restored = PipelineSpec.read_file("pipeline.spec.json").to_pipeline()
-assert restored.configuration_fingerprint() == pipeline.configuration_fingerprint()
-```
-
-```bash
-aranorm spec export --preset deep --output pipeline.spec.json
-aranorm spec validate pipeline.spec.json --json
-aranorm serve --spec pipeline.spec.json --reload-interval 1.0
-```
-
-المواصفة تعيد بناء `PipelineConfig` فقط؛ لا تُسلسل المعالجات المخصصة أو الحالة التنفيذية تلقائيًا. عند الحاجة إلى مكونات إضافية يجب تسجيلها كـplugin وإعادة حقنها صراحة في طبقة التطبيق. يدعم `PipelineRuntime.reload_from_spec_file()` النشر الذري ويحافظ على snapshot السابق عند فشل التحقق.
-
-### تشخيص Plugins
-
-يمكن فحص معالجات plugins المسجلة عبر entry points دون إيقاف الخدمة عند فشل plugin منفرد. يعيد التقرير أسماء plugins المكتشفة وأخطاء قابلة للتسلسل، مع ترتيب حتمي؛ أما `--strict` فيحوّل أول فشل إلى عملية غير ناجحة لاستخدامه في بوابات النشر:
-
-```bash
-aranorm version --json
-aranorm plugins --json
-aranorm plugins --group aranorm.processors --strict
-```
-
-وللاستخدام البرمجي:
-
-```python
-from aranorm import ProcessorRegistry
-
-report = ProcessorRegistry().discover_report()
-if not report.ok:
-    for failure in report.failures:
-        print(failure.name, failure.error_type, failure.message)
-```
-
-تتعامل AraNorm مع فشل الاكتشاف كحالة diagnostics غير قاتلة افتراضيًا، ولا تستبدل plugin صالحًا بآخر مكرر؛ ويمكن استخدام `report.to_dict()` لإرساله إلى أنظمة المراقبة دون تضمين نصوص المستخدم. تضيف مخرجات CLI بصيغة JSON الحقل `schema_version` لتسهيل التطوير المتوافق، بينما يبقى تمثيل التقرير البرمجي كما هو.
-
-يعيد `aranorm version --json` كائنًا ثابتًا يتضمن `schema_version` و`package` و`version`، ويعيد `aranorm plugins --json` تقرير الاكتشاف مع `schema_version` وحالة `ok` وقوائم الاكتشاف والفشل. يعتمد العقد على مجموعة `aranorm.processors` القياسية في `dist-info/entry_points.txt`؛ وتثبت `tests/test_plugin_installation_round8.py` حالات التوزيع المثبت الناجح، والمعالج غير الصالح، ووضع `--strict`. يمكن تشغيلها منفردة عبر `make plugin-contracts`.
-
-### Runtime وخدمة HTTP اختيارية
-
-للتطبيقات طويلة التشغيل، توفر AraNorm طبقة `PipelineRuntime` فوق الـ pipeline القائم. تبني الطبقة snapshot جديدًا كاملًا قبل نشره، وتبقي snapshot السابق فعالًا إذا فشل reload. لا يبدأ أي listener عند استيراد الحزمة، وتبقى التبعيات الأساسية صفرًا.
-
-```python
-from aranorm import PipelineConfig, PipelineRuntime
-
-runtime = PipelineRuntime(PipelineConfig(preset="standard"))
-old_pipeline = runtime.get_pipeline()
-reload_result = runtime.reload(PipelineConfig(preset="deep"))
-
-print(reload_result.to_dict())
-print(runtime.health().to_dict())
-assert old_pipeline is not runtime.get_pipeline()
-```
-
-تتضمن `RuntimeHealth` الحالة `ready` أو `degraded`، وgeneration، وبصمة الإعداد، وسبب آخر فشل reload بعد تنقيحه. لا تتضمن health أو reload reports نصوص المستخدم أو نتائج التطبيع.
-
-يمكن تشغيل adapter HTTP اختياري مبني على مكتبة Python القياسية:
-
-```bash
-aranorm serve --host 127.0.0.1 --port 8765 --preset standard
-aranorm serve --config pipeline.json --reload-interval 1.0
-aranorm serve --spec pipeline.spec.json --reload-interval 1.0
-aranorm serve --host 127.0.0.1 --port 8765 --streaming-enabled --streaming-root ./data
-aranorm spec export --preset deep --output pipeline.spec.json
-aranorm spec validate pipeline.spec.json --json
-```
-
-| المسار | الطريقة | الاستخدام |
-|---|---|---|
-| `/health/live` | `GET` | فحص liveness سريع |
-| `/health/ready` | `GET` | readiness وgeneration وحالة degraded |
-| `/v1/normalize` | `POST` | `{"text": "نص عربي"}` |
-| `/v1/batch` | `POST` | `{"texts": ["نص 1", "نص 2"], "batch_size": 32, "workers": 1}` |
-| `/v1/describe` | `GET` | metadata تشغيلية منزوعة الحساسية |
-| `/v1/stream` | `POST`، عند تفعيل `--streaming-enabled` | تشغيل جلسة ملفات محلية عبر `source_path` و`output_path` و`checkpoint_path` |
-
-يفرض الخادم JSON صحيحًا و`Content-Type: application/json` وحدًا افتراضيًا لحجم body مقداره 2,000,000 بايت. يبقى `/v1/stream` معطلاً افتراضيًا، وعند تفعيله يمكن تقييد كل المسارات إلى مجلد قائم عبر `--streaming-root`؛ تُرفض المسارات الخارجة عن الجذر أو التي تعبر symlink بصفحة `403`. يفرض endpoint قفل الجلسة محليًا، ويرجع `409` عند تعارض جلسة أو تغير المصدر أثناء التشغيل. يجب تشغيله خلف تفويض موثوق وعدم تعريضه مباشرةً لطلبات غير موثوقة. هذا adapter مناسب للتشغيل المحلي أو خلف reverse proxy موثوق؛ أما TLS والمصادقة والتفويض وrate limiting فتظل مسؤولية gateway الإنتاجي.
-
-### كاش LRU متدفق
-
-للنصوص المتكررة، يمكن تغليف الـ pipeline بكاش LRU آمن للاستخدام المتزامن. يدعم الكاش الآن المعالجة الدفعية والمتدفقة مع حد أقصى للحجم وإحصاءات hits/misses قابلة للرصد.
-
-```python
-from aranorm import ArabicNormalizationPipeline
-from aranorm.utils.cache import NormalizationCache
-
-cache = NormalizationCache(ArabicNormalizationPipeline.from_preset("light"), maxsize=8192)
-with open("texts.txt", encoding="utf-8") as source:
-    for result in cache.process_iter(source, batch_size=256, n_workers=4):
-        print(result.normalized_text)
-
-print(cache.stats())
-```
-
-### Processors منفردة
-
-```python
-from aranorm.processors import ALEFProcessor, HamzaProcessor, DiacriticsProcessor
-
-ALEFProcessor().process("أحمد إبراهيم آمن ٱلله")
-# → "احمد ابراهيم امن الله"
-
-HamzaProcessor().process("سؤال شيئ")
-# → "سءال شيء"
-
-DiacriticsProcessor().process("مَرْحَبًا بِكُمْ")
-# → "مرحبا بكم"
-```
-
-### معالجات المنصات
-
-```python
-from aranorm.processors import TwitterNormalizer, WhatsAppNormalizer, ChatNormalizer
-
-# تويتر
-TwitterNormalizer().process("RT @user: شلونك؟ #موضوع https://t.co/x")
-# → "شلونك؟ موضوع"
-
-# واتساب
-WhatsAppNormalizer().process("انشالله الشغل يخلص بكره 🙏 *مهم*: اجتماع")
-# → "إن شاء الله الشغل يخلص بكره 🙏 مهم: اجتماع"
-
-# دردشة
-ChatNormalizer().process("هههههههههه مضحك جداً")
-# → "هه مضحك جداً"
-```
-
----
-
-## الـ Presets
-
-| Preset         | الوصف                                                        |
-|----------------|--------------------------------------------------------------|
-| `light`        | تطبيع أساسي فقط. لا حاجة لأي تبعيات خارجية. أسرع preset.    |
-| `standard`     | الافتراضي. alef + hamza + diacritics + urls + whitespace.    |
-| `deep`         | كل شيء. + تكرار الحروف + تصحيح الترقيم.                      |
-| `social_media` | مثالي لتويتر/إنستاغرام. URLs + mentions + emojis.            |
-
----
-
-## اللهجات المدعومة
-
-| الرمز | اللهجة                               |
-|-------|--------------------------------------|
-| `EGY` | مصرية                                |
-| `GLF` | خليجية (السعودية، الإمارات، الكويت)   |
-| `LEV` | شامية (سوريا، لبنان، فلسطين، الأردن) |
-| `IRQ` | عراقية                               |
-| `NOR` | مغاربية (المغرب، الجزائر، ليبيا)     |
-| `TUN` | تونسية                               |
-| `YEM` | يمنية                                |
-| `MSA` | الفصحى                               |
-
----
-
-## الأداء
-
-| Preset         | النصوص/الثانية |
-|----------------|---------------|
-| `light`        | ~17,000       |
-| `standard`     | ~15,000       |
-| `deep`         | ~13,000       |
-| `social_media` | ~12,000       |
-
-*مقاس على Python 3.11 — جهاز واحد، خيط واحد.*
-
----
-
-## المعمارية
-
-```
-aranorm/
-├── core/           # Pipeline, Config (dataclass), Base ABC, Registry
-├── stages/         # ContentCleaner, OrthographicNormalizer, DialectIdentifier,
-│                   # DialectNormalizer, MorphologicalProcessor
-├── processors/     # 20+ processors منفردون (Processor interface)
-├── models/         # Lazy wrappers: CODAModel, MSAModel, DialectIDModel
-├── utils/          # Constants, patterns (regex), validators, helpers
-├── data/           # dialect_mappings.json, arabizi_mappings.json,
-│                   # chat_abbreviations.json
-└── exceptions/     # AraNormError hierarchy
-```
-
----
-
-## التطوير
-
-```bash
-git clone <repo>
-cd aranorm
-pip install -e ".[dev]"
-
-# تشغيل الاختبارات
-make test              # كل الاختبارات مع تفاصيل
-make test-fast         # سريع بدون verbose
-
-# بوابة الجودة غير المغيرة
-make verify            # format-check + lint + type-check + test
-
-# تشغيل الفحوص منفردة
-make lint              # flake8
-make format            # black
-make format-check      # تحقق Black دون تعديل الملفات
-make type-check        # mypy
-
-# بنشمارك
-make benchmark         # 1000 نص
-make benchmark-quick   # 100 نص فقط
-```
-
----
-
-### عقود الثبات في الإصدارات الحديثة
-
-يضمن `PipelineConfig.from_dict()` عدم تعديل القاموس الذي يمرره المستهلك، ويرفض مفاتيح الإعدادات غير المعروفة مبكرًا برسالة واضحة. كما تحافظ `process_batch()` و`process_batch_async()` و`process_iter()` على ترتيب النتائج المطابق لترتيب الإدخال، وتحتفظ `NormalizationResult` ببياناتها عند التحويل ذهابًا وإيابًا عبر `to_dict()` و`from_dict()`. ويستخدم `process_iter()` دفعات bounded، بينما يوفر `StreamingBatchExporter` تصديرًا تدريجيًا إلى file-like objects أو مسارات الملفات.
-
-للمساهمة، شغّل `make verify` قبل فتح طلب دمج. ويغطي سير CI الرسمي الاختبارات و`flake8` و`mypy` وBlack على Python 3.10–3.13.
-
----
-
-## Stop Words Support (جديد — v1.1)
-
-نظام متكامل لكلمات التوقف العربية يدعم الفصحى (MSA) و8 لهجات والمحتوى العصري.
-
-### Quick Start
+### 2) الكلمات الوقفية | Stop words
 
 ```python
 from aranorm import ArabicNormalizationPipeline, PipelineConfig, StopWordsConfig
@@ -494,126 +98,166 @@ from aranorm import ArabicNormalizationPipeline, PipelineConfig, StopWordsConfig
 config = PipelineConfig(
     preset="standard",
     stop_words_config=StopWordsConfig(
-        mode="remove",
-        scope="dialect_aware",
-        dialects=frozenset(["EGY", "GLF"]),
-        preserve_negation=True,
-        remove_filler=True,
+        mode="remove",          # "remove" | "extract" | "highlight" | "count"
+        scope="dialect_aware",  # "universal" | "msa_only" | "dialect_aware" | "custom"
+        dialects={"EGY", "GLF"},
+        preserve_negation=True, # keep لا، لم، لن
+        remove_filler=True,     # strip يعني، والله، خلاص...
     ),
 )
 pipeline = ArabicNormalizationPipeline(config)
-result = pipeline.process("أنا والله يعني سعيد جداً اليوم")
+result = pipeline.process("أنا سعيد جداً اليوم")
 
-print(result.stop_words_removed)      # → "سعيد"
-print(result.stop_words_found)        # → {"أنا", "والله", "يعني", "جداً", "اليوم"}
-print(result.stop_words_stats)        # → {count: 5, percentage: 71.4, by_category: {...}}
+print(result.stop_words_removed)   # سعيد اليوم
+print(result.stop_words_found)     # {'أنا', 'جداً'}
+print(result.stop_words_stats)     # counts, ratio, per-category breakdown
 ```
 
-### Modes
-
-| Mode        | الوصف                                          |
-|-------------|------------------------------------------------|
-| `remove`    | إزالة stop words من النص (الافتراضي)            |
-| `extract`   | استخراج stop words فقط                         |
-| `highlight` | وضع علامة `[[…]]` على stop words               |
-| `count`     | إحصاء فقط بدون تعديل النص                      |
-
-### Scopes
-
-| Scope            | الوصف                                     |
-|------------------|-------------------------------------------|
-| `universal`      | كل stop words (MSA + لهجات + عصرية)       |
-| `msa_only`       | الفصحى فقط                               |
-| `dialect_aware`  | MSA + لهجات محددة                         |
-| `custom`         | قائمة مخصصة فقط                           |
-
-### اللهجات المدعومة
-
-`EGY` (مصرية) · `GLF` (خليجية) · `LEV` (شامية) · `IRQ` (عراقية) ·
-`NOR` (مغاربية) · `TUN` (تونسية) · `YEM` (يمنية) · `MSA` (فصحى)
-
-### المعالجات المنفردة
+### 3) التحليل اللغوي | Linguistic analysis
 
 ```python
-from aranorm.processors import (
-    StopWordsProcessor,     # المعالج الرئيسي (remove/extract/highlight/count)
-    ContextAwareProcessor,  # إزالة ذكية حسب السياق (لا النافية / إن التوكيدية)
-    DialectStopProcessor,   # إزالة لهجية
-    ArabiziStopProcessor,   # إزالة Arabizi (2na، 3nd …)
-    InternetStopProcessor,  # إزالة رموز الإنترنت (lol، www …)
+from aranorm.analysis import (
+    SentimentAnalyzer, KeywordExtractor, ArabicTextSummarizer,
+    ArabicReadabilityAnalyzer, EmotionAnalyzer, StyleAnalyzer,
 )
+from aranorm.analysis.quality_score import analyze_quality
 
-# Context-aware: احتفظ بـ "لا" النافية
-from aranorm.processors import ContextAwareProcessor
-proc = ContextAwareProcessor(preserve_negation=True)
-proc.process("لا أحب هذا")   # → "لا أحب هذا"  (لا محفوظة)
-proc.process("لا شك في ذلك") # → "شك"           (لا شك = مصطلح → أزلت)
+sentiment = SentimentAnalyzer().analyze("هذا المنتج رائع جداً")
+print(sentiment.label, sentiment.score)          # positive 0.75
 
-# Dialect-aware
-from aranorm.processors import DialectStopProcessor
-proc = DialectStopProcessor(dialects=["EGY", "GLF"])
-proc.process("أنا كده الحين سعيد")  # → "سعيد"
+keywords = KeywordExtractor(top_n=5).extract("...")
+print(keywords.top_keywords)
+
+quality = analyze_quality("نص عربي للتحليل")
+print(quality.score, quality.label, quality.suggestions)
 ```
 
-### StopWordsRegistry — البحث O(m) بالـ Trie
+### 4) الدفعات والتصدير | Batches & export
 
 ```python
-from aranorm import StopWordsRegistry
+from aranorm.utils import BatchExporter
 
-registry = StopWordsRegistry()
+results = pipeline.process_batch(["نص أول", "نص ثاني"], n_workers=4)
 
-registry.is_stop("من")                     # True  (MSA)
-registry.is_stop("كده", dialect="EGY")    # True  (مصرية)
-registry.is_stop("كده", dialect="GLF")    # False (ليست خليجية)
-registry.is_stop("2na", is_arabizi=True)  # True  (Arabizi)
-
-registry.get_by_category("prepositions")  # {"في", "من", "إلى", ...}
-registry.get_by_category("filler")        # {"يعني", "والله", ...}
-registry.get_stats()                      # {total_universal: 2449, msa: 715, egy: 65, ...}
+exporter = BatchExporter(results)
+exporter.to_csv("output.csv")
+exporter.to_jsonl("output.jsonl")
+exporter.to_json("output.json")
 ```
 
-### التكاملات مع مكتبات NLP
+### 5) سطر الأوامر | Command line
 
-```python
-from aranorm.integrations import (
-    NLTKStopWordsAdapter,    # توافق NLTK
-    SpacyStopWordsAdapter,   # توافق spaCy
-    SklearnStopWordsAdapter, # توافق scikit-learn
-)
-
-# scikit-learn
-from sklearn.feature_extraction.text import TfidfVectorizer
-adapter = SklearnStopWordsAdapter()
-vectorizer = TfidfVectorizer(stop_words=list(adapter.to_sklearn_set()))
-
-# NLTK
-adapter = NLTKStopWordsAdapter()
-nltk_words = adapter.to_nltk_list()   # قائمة مرتبة
-
-# spaCy
-adapter = SpacyStopWordsAdapter()
-nlp = adapter.enrich_spacy(nlp)       # يضيف كلمات التوقف لنموذج spaCy
+```bash
+$ aranorm normalize "أهـــلاً شلونك؟" --preset social_media
+$ echo "نص للتحليل" | aranorm sentiment --json
+$ aranorm batch --file input.txt --output out.jsonl --preset deep --workers 8
+$ aranorm quality "النص العربي" --json
+$ aranorm serve --port 8765        # HTTP normalization service
 ```
 
-### الـ Presets الجاهزة
+## 🎛️ الإعدادات المسبقة | Presets
 
-```python
-from aranorm import StopWordsConfig
+| Preset | الاستخدام | Use case |
+|---|---|---|
+| `light` | تطبيع إملائي فقط دون حذف أي محتوى | Orthographic pass only; nothing removed |
+| `standard` | التوازن الافتراضي: تنظيف روابط/بريد/HTML + تطبيع كامل | Default balance: clean URLs/emails/HTML + full normalization |
+| `deep` | أقصى تنظيف + تقليص التكرارات الإنتاجية (ياااا → يا) | Maximum cleaning + expressive repetition collapse |
+| `social_media` | للمنصات الاجتماعية: إزالة منشنات/إيموجي + كلمات وقفية تلقائية | Social platforms: strip mentions/emojis + auto stop-words |
 
-# سوشيال ميديا: يزيل filler + internet + arabizi
-cfg = StopWordsConfig.for_social_media()
+كل خيار متاح كحقل مستقل في `PipelineConfig` — عدّل ما تشاء فوق أي preset. | Every option is an independent `PipelineConfig` field — override anything on top of any preset.
 
-# لهجة محددة
-cfg = StopWordsConfig.for_dialect("EGY", "GLF")
+## 🆚 المقارنة مع المكتبات الأخرى | Comparison
 
-# إحصاء فقط بدون تعديل
-cfg = StopWordsConfig.count_only()
+| Capability | **AraNorm** | CAMeL Tools | PyArabic | tnkeeh |
+|---|:---:|:---:|:---:|:---:|
+| Unified pipeline | ✅ | ❌ | ❌ | ❌ |
+| Dialect-aware | ✅ 10 regions | ✅ 5 (MADAR) | ❌ | ❌ |
+| Arabizi conversion | ✅ | ❌ | ❌ | ❌ |
+| Platform normalizers (X/WhatsApp) | ✅ | ❌ | ❌ | ❌ |
+| Stop-word engine | ✅ 8 dialects + domains | ❌ | ❌ | ❌ |
+| Analysis toolkit | ✅ 45+ analyzers | ✅ (ML) | ❌ | ❌ |
+| Batch + streaming | ✅ resumable | ❌ | ❌ | ❌ |
+| CLI | ✅ 43 commands | ✅ | ❌ | ❌ |
+| Zero mandatory deps | ✅ | ❌ (requires CAMeL) | ✅ | ✅ |
+
+AraNorm لا تستبدل أدوات التعلم الآلي — بل تكمّلها: استخدم CAMeL Tools أو Transformers عبر التبعيات الاختيارية عندما تحتاج دقة النماذج، واستخدم نواة AraNorm السريعة دائماً.
+
+AraNorm does not replace ML tooling — it complements it: use CAMeL Tools or Transformers through the optional extras when you need model accuracy, and use the fast AraNorm core everywhere else.
+
+## 📚 التوثيق | Documentation
+
+| الدليل | Guide | المحتوى | Contents |
+|---|---|---|---|
+| [Getting Started](docs/getting-started.md) | البدء | التثبيت، أول pipeline، الأساسيات | Install, first pipeline, basics |
+| [Configuration](docs/configuration.md) | الإعدادات | كل حقول `PipelineConfig` موثقة | Every `PipelineConfig` field |
+| [Presets & Processors](docs/processors.md) | المعالجات | 48 معالجاً مشروحاً بالأمثلة | All 48 processors explained |
+| [Stop Words](docs/stopwords.md) | الكلمات الوقفية | الأوضاع، النطاقات، اللهجات، المجالات | Modes, scopes, dialects, domains |
+| [Analysis Toolkit](docs/analysis.md) | التحليل | 45+ محللاً بالتفصيل | All 45+ analyzers in depth |
+| [CLI Reference](docs/cli.md) | سطر الأوامر | 43 أمراً بكل الخيارات | All 43 commands |
+| [Streaming & Server](docs/streaming.md) | البث والخادم | جلسات قابلة للاستئناف + HTTP | Resumable sessions + HTTP |
+| [Integrations](docs/integrations.md) | التكاملات | pandas، sklearn، spaCy، NLTK، HF | pandas, sklearn, spaCy, NLTK, HF |
+| [API Reference](docs/api.md) | المرجع | الواجهة البرمجية الكاملة | Complete API surface |
+| [Architecture](docs/architecture.md) | المعمارية | المراحل، السجل، العقود | Stages, registry, contracts |
+| [Performance](docs/performance.md) | الأداء | أرقام الإنتاجية والممارسات | Throughput numbers & practices |
+| [FAQ](docs/faq.md) | أسئلة شائعة | إجابات عملية | Practical answers |
+| [Troubleshooting](docs/troubleshooting.md) | حل المشاكل | تشخيص الأخطاء الشائعة | Diagnosing common errors |
+| [Migration](docs/migration.md) | الترقية | التغييرات بين الإصدارات | Changes between versions |
+
+## ⚡ الأداء | Performance
+
+أرقام مرجعية على جهاز محمول (Core i7، معالجة متتابعة) | Reference numbers on a laptop (Core i7, sequential):
+
+| Preset | Throughput |
+|---|---|
+| `light` | ~2,400 texts/s |
+| `standard` | ~1,650 texts/s |
+| `deep` | ~1,350 texts/s |
+| `social_media` | ~1,430 texts/s |
+
+شغّل القياس بنفسك | Run the benchmark yourself:
+
+```bash
+pip install -e ".[dev]" && python scripts/benchmark.py
 ```
 
-> **ملاحظة:** الـ preset `social_media` يفعّل إزالة filler + internet + Arabizi تلقائياً.
+## 🤝 المساهمة | Contributing
+
+المساهمات مرحب بها! | Contributions are welcome!
+
+```bash
+git clone https://github.com/Alqudimi/AraNorm.git
+cd AraNorm
+pip install -e ".[dev]"
+make verify     # format-check + lint + type-check + tests
+```
+
+انظر [CONTRIBUTING.md](CONTRIBUTING.md) للتفاصيل، و[SECURITY.md](SECURITY.md) لسياسة الإبلاغ عن الثغرات.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details and [SECURITY.md](SECURITY.md) for the vulnerability disclosure policy.
+
+## 📄 الترخيص | License
+
+MIT © 2024-2026 [Abdulaziz Mohammed Alqudimi](https://github.com/Alqudimi) — انظر | see [LICENSE](LICENSE).
+
+## 📖 الاقتباس | Citation
+
+إذا استخدمت AraNorm في بحث علمي، اقتبسها عبر ملف `CITATION.cff`:
+If you use AraNorm in academic work, please cite it via the `CITATION.cff` file:
+
+```bibtex
+@software{alqudimi_aranorm_2026,
+  author  = {Alqudimi, Abdulaziz Mohammed},
+  title   = {AraNorm: Production-grade Arabic Text Normalization},
+  year    = {2026},
+  url     = {https://github.com/Alqudimi/AraNorm},
+  version = {1.15.0}
+}
+```
 
 ---
 
-## الرخصة
+<div align="center">
 
-[MIT](LICENSE) — AraNorm Contributors, 2024
+**صُنع بعناية للغة العربية** 🌙
+*Crafted with care for the Arabic language*
+
+</div>

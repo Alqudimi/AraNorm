@@ -6,7 +6,7 @@ SRC          := src
 TESTS        := tests
 SCRIPTS      := scripts
 
-.PHONY: help install dev-install test test-fast test-cov server-contracts streaming-contracts plugin-contracts installed-smoke lint format format-check type-check verify benchmark benchmark-quick clean all
+.PHONY: help install dev-install test test-fast test-cov server-contracts streaming-contracts plugin-contracts installed-smoke lint format format-check type-check verify build check-package benchmark benchmark-quick clean all
 
 help:          ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \
@@ -15,8 +15,8 @@ help:          ## Show this help message
 install:       ## Install the package (editable)
 	pip install -e .
 
-dev-install:   ## Install package + dev/quality extras
-	pip install -e ".[dev,quality]"
+dev-install:   ## Install package + dev extras (tests, lint, build, release tooling)
+	pip install -e ".[dev]"
 
 test:          ## Run all tests
 	$(PYTHON) -m pytest $(TESTS) -v
@@ -51,6 +51,14 @@ format-check:  ## Check formatting without changing files
 type-check:    ## Run mypy type checker
 	mypy $(SRC) --ignore-missing-imports
 
+verify: format-check lint type-check test  ## Run the complete non-mutating quality gate
+
+build:         ## Build wheel and source distribution
+	$(PYTHON) -m build
+
+check-package: build ## Build and validate distribution metadata with twine
+	$(PYTHON) -m twine check dist/*
+
 benchmark:     ## Run the full pipeline benchmark
 	$(PYTHON) $(SCRIPTS)/benchmark.py
 
@@ -63,7 +71,5 @@ clean:         ## Remove build artefacts and caches
 	find . -name "*.pyc" -delete
 	find . -name ".mypy_cache" -type d | xargs rm -rf
 	find . -name ".pytest_cache" -type d | xargs rm -rf
-
-verify: format-check lint type-check test  ## Run the complete non-mutating quality gate
 
 all: verify  ## Run the complete quality gate

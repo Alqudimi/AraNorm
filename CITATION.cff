@@ -1,0 +1,35 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+cff-version: 1.2.0
+title: "AraNorm: Production-grade Arabic Text Normalization"
+message: >-
+  If you use AraNorm in your research or software, please cite it
+  using the metadata in this file.
+type: software
+authors:
+  - given-names: Abdulaziz Mohammed
+    family-names: Alqudimi
+    email: eng7mi@gmail.com
+identifiers:
+  - type: url
+    value: "https://github.com/Alqudimi/AraNorm"
+    description: GitHub repository
+repository-code: "https://github.com/Alqudimi/AraNorm"
+abstract: >-
+  AraNorm is a production-grade, dependency-free Arabic text
+  normalization library for Python. It unifies orthographic
+  normalization, dialect identification and conversion, Arabizi
+  transliteration, an advanced stop-word engine covering eight Arabic
+  dialects, and more than 45 linguistic analyzers behind a single,
+  typed, thoroughly tested API. It also ships a 43-command CLI, an
+  optional HTTP normalization service, resumable streaming sessions
+  with atomic checkpoints, and integrations with pandas,
+  scikit-learn, spaCy, NLTK, and HuggingFace.
+keywords:
+  - arabic
+  - nlp
+  - natural-language-processing
+  - text-normalization
+  - arabic-dialects
+  - computational-linguistics
+license: MIT

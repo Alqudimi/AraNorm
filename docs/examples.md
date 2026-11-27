@@ -1,5 +1,29 @@
 # AraNorm — Examples
 
+مجموعة أمثلة عملية كاملة — كل مثال قابل للتشغيل مباشرة.
+A complete practical gallery — every example is runnable as-is.
+
+## السكربتات الجاهزة | Runnable scripts
+
+كل سكربت يعمل مباشرة بعد `pip install aranorm` — شغّله بـ `python <script>`:
+
+| Script | ماذا يعرض | What it demonstrates |
+|---|---|---|
+| [`examples/01_basic_normalization.py`](../examples/01_basic_normalization.py) | الـ presets الأربعة ونتائجها | The four presets side by side |
+| [`examples/02_stop_words.py`](../examples/02_stop_words.py) | محرك الكلمات الوقفية | The stop-words engine |
+| [`examples/03_analysis.py`](../examples/03_analysis.py) | إحصاءات، مشاعر، كلمات مفتاحية، مقروئية، تلخيص، مقارنة | Stats, sentiment, keywords, readability, summarization, comparison |
+| [`examples/04_processors.py`](../examples/04_processors.py) | المعالجات المفردة | Standalone processors |
+| [`examples/05_builder_and_config.py`](../examples/05_builder_and_config.py) | البناء المتسلسل والإعدادات | The fluent builder + config |
+| [`examples/06_streaming.py`](../examples/06_streaming.py) | جلسة بث قابلة للاستئناف بنقطة تفتيش | Resumable streaming session |
+| [`examples/07_quality_and_profiling.py`](../examples/07_quality_and_profiling.py) | درجة الجودة، تقرير الإملاء، المحلل الموحد 22 محوراً | Quality score, spelling report, 22-axis profiler |
+| [`examples/08_batch_processing.py`](../examples/08_batch_processing.py) | دفعات متوازية، إعادة محاولة، تقدم، تصدير | Parallel batches, retries, progress, export |
+| [`examples/09_custom_processor.py`](../examples/09_custom_processor.py) | كتابة معالج مخصص وتسجيله | Writing and registering a custom processor |
+| [`examples/10_integrations.py`](../examples/10_integrations.py) | pandas و scikit-learn | pandas and scikit-learn adapters |
+
+---
+
+## Walkthroughs — شروحات تفصيلية
+
 ## 1. تنظيف بيانات تويتر (Twitter Data Cleaning)
 
 تنظيف تغريدة كاملة تحتوي على روابط ومنشنات وهاشتاجات وإيموجي:

@@ -1,6 +1,7 @@
 """Example 03: Text analysis features.
 
-Demonstrates sentiment analysis, keyword extraction, readability, and summarization.
+Demonstrates text statistics, sentiment analysis, keyword extraction,
+readability, summarization, and text comparison.
 """
 
 from aranorm.analysis import (
@@ -22,10 +23,13 @@ TEXT = """
 analyzer = TextAnalyzer()
 stats = analyzer.analyze(TEXT)
 print("Text Statistics:")
-print(f"  Words: {stats.word_count}")
-print(f"  Sentences: {stats.sentence_count}")
-print(f"  Unique words: {stats.unique_words}")
+print(f"  Words:            {stats.total_words}")
+print(f"  Sentences:        {stats.sentence_count}")
+print(f"  Unique words:     {stats.unique_words}")
+print(f"  Content words:    {stats.content_words_count} ({stats.content_words_ratio:.0%})")
 print(f"  Lexical diversity: {stats.lexical_diversity:.2f}")
+print(f"  Complexity:       {stats.estimated_complexity}")
+print(f"  Dialect hint:     {stats.dialect_hint}")
 print()
 
 # ── 2. Sentiment analysis ─────────────────────────────────────────────────────
@@ -42,31 +46,32 @@ for text in samples:
 print()
 
 # ── 3. Keyword extraction ─────────────────────────────────────────────────────
-ke = KeywordExtractor()
-keywords = ke.extract(TEXT, top_k=5)
+ke = KeywordExtractor(top_n=5)
+keywords = ke.extract(TEXT)
 print("Top Keywords:")
-for word, score in keywords:
+for word, score in keywords.keywords:
     print(f"  {word:15} {score:.4f}")
 print()
 
 # ── 4. Readability ────────────────────────────────────────────────────────────
 ra = ArabicReadabilityAnalyzer()
-score = ra.score(TEXT)
-print(f"Readability Score: {score:.1f}/100")
+readability = ra.analyze(TEXT)
+print(f"Readability Score: {readability.score:.1f}/100 ({readability.readability_label})")
 print()
 
 # ── 5. Summarization ──────────────────────────────────────────────────────────
-summarizer = ArabicTextSummarizer()
-summary = summarizer.summarize(TEXT, max_sentences=2)
+summarizer = ArabicTextSummarizer(max_sentences=2)
+summary = summarizer.summarize(TEXT)
 print("Summary (2 sentences):")
-print(f"  {summary}")
+print(f"  {summary.summary_text}")
+print(f"  (compression: {summary.compression_ratio:.0%})")
 print()
 
 # ── 6. Text comparison ────────────────────────────────────────────────────────
 comparator = TextComparator()
 text1 = "أنا أحب اللغة العربية وأدرسها كل يوم"
 text2 = "أنا أعشق اللغة العربية وأتعلمها باستمرار"
-sim = comparator.similarity(text1, text2)
-print(f"Similarity: {sim:.2f}")
+similarity = comparator.compare(text1, text2)
+print(f"Similarity: {similarity.overall_similarity:.2f} ({similarity.verdict})")
 print(f"  Text 1: {text1}")
 print(f"  Text 2: {text2}")

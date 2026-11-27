@@ -1,2 +1,0 @@
-cb238ca0b435f4d21c5f68406b7c73850bcbb6cebc9aa09a6098e9cfa1b1f915  dist/aranorm-1.6.0-py3-none-any.whl
-857e9f53ffda0e47b5777e7ec4b00a57476346e2cf9bc359a81a371cf32791eb  dist/aranorm-1.6.0.tar.gz

@@ -1,27 +1,32 @@
-# AraNorm v1.2.0 — API Reference
+# API Reference — المرجع البرمجي
 
-## Table of Contents
+The complete public API surface of AraNorm 1.15.0, organized by module. Every symbol listed here is exported, typed, and covered by tests.
+
+Import roots:
+
+```python
+import aranorm                          # pipeline, config, exceptions, core contracts
+from aranorm.analysis import ...        # 45+ analyzers
+from aranorm.processors import ...      # 48 processors
+from aranorm.utils import ...           # tokenizers, stemmers, cache, exporters
+from aranorm.integrations import ...    # pandas, sklearn, spaCy, NLTK, HF adapters
+from aranorm.models import ...          # CODAModel, MSAModel, DialectIDModel
+```
+
+---
+
+## Table of contents
 
 1. [Pipeline](#pipeline)
 2. [PipelineConfig](#pipelineconfig)
-3. [NormalizationResult](#normalizationresult)
-4. [PipelineBuilder](#pipelinebuilder)
-5. [Stop Words](#stop-words)
-6. [Text Analysis](#text-analysis)
-7. [ReadabilityAnalyzer](#readabilityanalyzer)
-8. [TextSummarizer](#textsummarizer)
-9. [SentimentAnalyzer](#sentimentanalyzer)
-10. [KeywordExtractor](#keywordextractor)
-11. [TextComparator](#textcomparator)
-12. [CorpusAnalyzer](#corpusanalyzer)
-13. [NormalizationCache](#normalizationcache)
-14. [BatchExporter](#batchexporter)
-15. [LanguageDetector](#languagedetector)
-16. [ProgressCallback](#progresscallback)
-17. [Integrations](#integrations)
-18. [Models](#models)
-19. [Exceptions](#exceptions)
-20. [CLI Reference](#cli-reference)
+3. [StopWordsConfig](#stopwordsconfig)
+4. [Batch contracts](#batch-contracts)
+5. [Runtime & specs](#runtime--specs)
+6. [Streaming](#streaming-1)
+7. [Metrics & registry](#metrics--registry)
+8. [Utils](#utils)
+9. [Exceptions](#exceptions-1)
+10. [Models](#models-1)
 
 ---
 
@@ -30,630 +35,275 @@
 ### `ArabicNormalizationPipeline`
 
 ```python
-from aranorm import ArabicNormalizationPipeline, PipelineConfig
+from aranorm import ArabicNormalizationPipeline
 
-pipeline = ArabicNormalizationPipeline(config: PipelineConfig)
+pipeline = ArabicNormalizationPipeline(config=None)   # defaults to standard preset
 ```
 
-**Methods**
+Construction:
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `process` | `(text: str) -> NormalizationResult` | Normalize a single text. |
-| `process_batch` | `(texts, batch_size=32, n_workers=1, on_error=None, progress_callback=None) -> List[NormalizationResult]` | Normalize many texts, optionally in parallel. |
-| `process_iter` | `(texts, batch_size=32, n_workers=1, on_error=None, progress_callback=None) -> Iterator[NormalizationResult]` | Normalize an iterable in bounded chunks while preserving input order. |
-| `builder` | `() -> PipelineBuilder` | Start a fluent builder. |
+| Method | Signature | Purpose |
+|---|---|---|
+| `__init__` | `(config=None, cleaner=None, normalizer=None, dialect_identifier=None, metrics=None, hooks=None)` | Build with full dependency injection |
+| `from_preset` | `(preset: str, **overrides) -> Pipeline` (classmethod) | Preset + tweaks |
+| `from_config_dict` | `(data: Dict) -> Pipeline` (classmethod) | From plain dict |
+| `from_spec` | `(spec) -> Pipeline` (classmethod) | From `PipelineSpec` (fingerprint-verified) |
+| `builder` | `() -> PipelineBuilder` (classmethod) | Fluent builder |
 
-**Example**
+Processing:
 
-```python
-pipeline = ArabicNormalizationPipeline(PipelineConfig(preset="standard"))
-result = pipeline.process("شلونك حبيبي؟")
-print(result.normalized_text, result.dialect, result.processing_time_ms)
-```
+| Method | Returns | Notes |
+|---|---|---|
+| `process(text)` | `NormalizationResult` | Single text |
+| `process_long_text(text, max_chunk_tokens=512, overlap_tokens=0)` | `NormalizationResult` | Chunked merge for long docs |
+| `process_batch(texts, batch_size=32, n_workers=1, on_error=None, progress_callback=None, policy=None, cancellation_token=None)` | `List[NormalizationResult]` | Order-preserving, parallel |
+| `process_batch_retry(texts, max_retries=3, ..., retry_policy=None)` | `BatchRetryReport` | Bounded per-item retries |
+| `process_iter(texts, ...)` | `Iterator[NormalizationResult]` | Lazy, constant-memory |
+| `await process_async(text)` | `NormalizationResult` | Thread-pool backed |
+| `await process_batch_async(texts, n_workers=4, ...)` | `List[NormalizationResult]` | Async batch |
+| `await process_batch_retry_async(texts, ...)` | `BatchRetryReport` | Async retry |
 
----
+Introspection:
 
-## PipelineConfig
+| Method | Returns |
+|---|---|
+| `describe()` | Human-readable config summary |
+| `describe_operational()` | Versioned machine description |
+| `configuration_fingerprint()` | SHA-256 of canonical config |
+| `to_spec(metadata=None)` / `metrics_snapshot()` | `PipelineSpec` / `ProcessingMetricsSnapshot` |
 
-```python
-from aranorm import PipelineConfig, Preset, DialectTarget
+### `NormalizationResult` (dataclass)
 
-config = PipelineConfig(
-    preset="standard",            # "light" | "standard" | "deep" | "social_media"
-    dialect_target="none",        # "none" | "coda" | "msa"
-    remove_diacritics=True,
-    normalize_alef=True,
-    stop_words_config=None,
-)
-```
+| Field | Type | Meaning |
+|---|---|---|
+| `original_text` | `str` | Raw input |
+| `normalized_text` | `str` | Final output |
+| `dialect` | `Optional[str]` | Detected label (EGY/GLF/LEV/.../MSA) |
+| `dialect_confidence` | `Optional[float]` | 0–1 |
+| `coda_text` / `msa_text` | `Optional[str]` | Present when `dialect_target` set |
+| `processing_metadata` | `Dict[str, Any]` | Stage metadata |
+| `applied_steps` | `List[str]` | Processors that ran |
+| `processing_time_ms` | `Optional[float]` | Duration |
+| `stop_words_removed` | `Optional[str]` | Text after stop-word removal |
+| `stop_words_found` | `Optional[Set[str]]` | Matched stop words |
+| `stop_words_stats` | `Optional[Dict]` | count / total_tokens / percentage / by_category |
+| `stop_words_by_category` / `stop_words_by_dialect` | `Optional[Dict]` | Attribution |
+| `steps_trace` | `Optional[List[Tuple[str, str]]]` | When `emit_steps_trace=True` |
 
-**Presets**
+Properties: `dialect_label`, `confidence_score`, `is_msa`. Methods: `to_dict()`, `to_json()`, `from_dict()`, `to_csv_row()`.
 
-| Preset | Description |
-|--------|-------------|
-| `light` | URL + emoji removal only. |
-| `standard` | Alef normalization, diacritics, punctuation. |
-| `deep` | All of standard + repeated chars, Arabizi handling. |
-| `social_media` | Deep + hashtag/mention/RT stripping. |
-
-**Key methods**
-
-```python
-# Create a variant without mutating the original
-variant = config.copy_with(preset="deep", clean_emojis=True)
-
-# Validate consistency (raises ConfigurationError on conflicts)
-config.validate()
-
-# Serialization
-json_str  = config.to_json()
-cfg2      = PipelineConfig.from_json(json_str)
-
-yaml_str  = config.to_yaml()         # requires PyYAML
-cfg3      = PipelineConfig.from_yaml(yaml_str)
-
-cfg4      = PipelineConfig.from_file("config.json")  # .json / .yaml / .yml
-
-# Presets
-cfg5 = PipelineConfig.from_preset("social_media", clean_emojis=True)
-```
-
----
-
-## NormalizationResult
-
-```python
-@dataclass
-class NormalizationResult:
-    original_text: str
-    normalized_text: str
-    dialect: str                    # e.g. "EGY", "GLF", "MSA"
-    dialect_confidence: float       # 0.0–1.0
-    processing_time_ms: float       # wall-clock time in milliseconds
-    applied_steps: List[str]
-    processing_metadata: Dict[str, Any]
-
-    # Set when DialectTarget.CODA
-    coda_text: Optional[str]
-    # Set when DialectTarget.MSA
-    msa_text: Optional[str]
-
-    # Set when stop_words_config is provided
-    stop_words_removed: Optional[str]
-    stop_words_found: Optional[Set[str]]
-    stop_words_stats: Optional[Dict[str, Any]]
-    stop_words_by_category: Optional[Dict[str, List[str]]]
-    stop_words_by_dialect: Optional[Dict[str, List[str]]]
-    applied_stop_words_steps: Optional[List[str]]
-```
-
-**Methods**
-
-```python
-result.to_dict()           # → dict
-result.to_json()           # → JSON string
-result.to_csv_row()        # → list of str (for CSV writing)
-
-NormalizationResult.from_dict(d)   # reconstruct from dict
-```
-
----
-
-## PipelineBuilder
-
-Fluent builder for composing custom pipelines.
+### `PipelineBuilder`
 
 ```python
 pipeline = (
     ArabicNormalizationPipeline.builder()
-    .add_cleaner(urls=True, html=True, emojis=True)
-    .add_normalizer(normalize_alef=True, normalize_diacritics=True)
-    .add_dialect_processor(normalize_to="msa", supported_dialects=["EGY", "GLF"])
-    .add_stop_words(mode="remove", scope="universal", remove_filler=True)
+    .add_cleaner(clean_urls=True, clean_mentions=True)          # clean_*/remove_* flags
+    .add_normalizer(normalize_alef=True, normalize_tatweel=True)
+    .add_dialect_processor(identify=True, normalize_to="msa", supported_dialects=None)
+    .add_stop_words(mode="remove", scope="universal")
     .build()
 )
 ```
 
 ---
 
-## Stop Words
+## PipelineConfig
 
-### `StopWordsConfig`
+Full field reference in the [Configuration guide](configuration.md). API surface:
 
-```python
-from aranorm import StopWordsConfig
+| Member | Signature |
+|---|---|
+| `to_dict()` / `to_json()` / `to_yaml()` | Serialization |
+| `from_dict(data)` / `from_json(s)` / `from_yaml(s)` / `from_file(path)` | Deserialization (strict — unknown keys raise) |
+| `from_preset(preset, **overrides)` | Preset factory |
+| `merge(other)` | Field-aware merge → new config |
+| `copy_with(**overrides)` | Flat override → new config |
+| `validate()` | Raises `ConfigurationError` on conflicts |
 
-config = StopWordsConfig(
-    mode="remove",          # "remove" | "extract" | "highlight" | "count"
-    scope="universal",      # "universal" | "msa_only" | "dialect_aware" | "filler" | "social" | "arabizi" | "internet" | "numbers" | "custom"
-    dialects=frozenset(),   # required when scope="dialect_aware"
-    custom_stop_words=frozenset(),  # required when scope="custom"
-    remove_filler=False,
-    preserve_negation=True,
-)
+Enums: `Preset` (`light`/`standard`/`deep`/`social_media`), `DialectTarget` (`none`/`coda`/`msa`).
 
-# Preset factory methods
-StopWordsConfig.for_social_media()
-StopWordsConfig.for_dialect("EGY", "GLF")
-StopWordsConfig.count_only()
-```
+### `ResourceLimits` (frozen)
+
+`max_text_length=1_000_000`, `max_batch_size=10_000`, `max_workers=64`, `reject_null_bytes=True` — plus `to_dict()` / `from_dict()`.
+
+---
+
+## StopWordsConfig
+
+Frozen dataclass — full semantics in the [Stop Words guide](stopwords.md).
+
+| Field | Type | Default |
+|---|---|---|
+| `mode` | `str` | `"remove"` (`remove`/`extract`/`highlight`/`count`) |
+| `scope` | `str` | `"universal"` (`universal`/`msa_only`/`dialect_aware`/`custom`) |
+| `dialects` | `FrozenSet[str]` | `frozenset()` (EGY/GLF/LEV/IRQ/NOR/TUN/YEM/MSA) |
+| `preserve_negation` | `bool` | `True` |
+| `preserve_emphasis` | `bool` | `False` |
+| `preserve_prepositions` | `bool` | `False` |
+| `remove_filler` | `bool` | `True` |
+| `remove_arabizi` / `remove_internet` / `remove_numbers` | `bool` | `False` |
+| `custom_stop_words` / `excluded_stop_words` | `Optional[FrozenSet[str]]` | `None` |
+
+Classmethods: `for_social_media()`, `for_dialect(*codes)`, `count_only()`.
 
 ### `StopWordsRegistry`
 
-```python
-from aranorm import StopWordsRegistry
-
-registry = StopWordsRegistry()
-words = registry.get_words("universal")   # → Set[str]
-stats = registry.get_stats()              # → Dict[str, int]
-```
+`is_stop(word, dialect=None, is_arabizi=False, is_internet=False)` · `get_words(scope, dialects=None)` · `get_by_category(category)` · `get_stats()` · `add_custom(words)` · `get_all_dialects()` — Trie-backed, O(word-length) lookup, LRU-cached.
 
 ---
 
-## Text Analysis
-
-### `TextAnalyzer`
+## Batch contracts
 
 ```python
-from aranorm.analysis import TextAnalyzer, TextAnalysisResult
-
-analyzer = TextAnalyzer()
-result: TextAnalysisResult = analyzer.analyze("النص العربي")
-
-result.total_words           # int
-result.stop_words_count      # int
-result.stop_words_ratio      # float
-result.content_words         # List[str]
-result.estimated_complexity  # str: "simple" | "moderate" | "complex"
-result.lexical_diversity     # float (type-token ratio)
-result.dialect_hint          # str or None
-result.to_dict()
-```
-
----
-
-## ReadabilityAnalyzer
-
-Computes a five-component Arabic readability score (0–100, higher = easier).
-
-```python
-from aranorm.analysis import ArabicReadabilityAnalyzer, ReadabilityResult
-
-analyzer = ArabicReadabilityAnalyzer()
-result: ReadabilityResult = analyzer.analyze("نص عربي هنا")
-
-result.score                  # float 0–100
-result.readability_label      # "very_easy" | "easy" | "moderate" | "complex" | "very_complex"
-result.avg_sentence_length    # float (words per sentence)
-result.avg_word_length        # float (chars per word)
-result.long_word_ratio        # float (words > 6 chars / total)
-result.complexity_marker_count  # int (prepositional phrases, nominal chains, etc.)
-result.to_dict()
-```
-
-**Score bands**
-
-| Score | Label |
-|-------|-------|
-| 80–100 | `very_easy` |
-| 60–79  | `easy` |
-| 40–59  | `moderate` |
-| 20–39  | `complex` |
-| 0–19   | `very_complex` |
-
----
-
-## TextSummarizer
-
-TF-IDF extractive summarization with position bias and stop-word filtering.
-
-```python
-from aranorm.analysis import ArabicTextSummarizer, SummaryResult
-
-summarizer = ArabicTextSummarizer(max_sentences=3)
-result: SummaryResult = summarizer.summarize("نص طويل جداً...")
-
-result.summary_text             # str
-result.original_sentence_count  # int
-result.summary_sentence_count   # int
-result.compression_ratio        # float (summary / original)
-result.top_keywords             # List[str]
-result.selected_indices         # List[int] (original sentence positions)
-```
-
----
-
-## SentimentAnalyzer
-
-Lexicon-based Arabic sentiment analysis (no ML required).
-
-```python
-from aranorm.analysis import SentimentAnalyzer, SentimentResult
-
-sa = SentimentAnalyzer()
-result: SentimentResult = sa.analyze("هذا المنتج رائع جداً")
-
-result.label           # "positive" | "negative" | "neutral"
-result.score           # float (positive = +, negative = -)
-result.confidence      # float 0–1
-result.positive_words  # List[str]
-result.negative_words  # List[str]
-result.to_dict()
-
-sa.get_lexicon_stats()  # → Dict with positive/negative/negation word counts
-```
-
----
-
-## KeywordExtractor
-
-```python
-from aranorm.analysis import KeywordExtractor, KeywordResult
-
-kw = KeywordExtractor(top_n=10)
-result: KeywordResult = kw.extract("نص عربي...")
-
-result.top_keywords       # List[str]
-result.keyword_scores     # Dict[str, float]
-result.content_word_count # int
-result.coverage_ratio     # float (content words / total)
-result.to_dict()
-```
-
----
-
-## TextComparator
-
-```python
-from aranorm.analysis import TextComparator, SimilarityResult
-
-comp = TextComparator()
-result: SimilarityResult = comp.compare("نص أ", "نص ب")
-
-result.overall_similarity     # float 0–1
-result.jaccard_similarity     # float
-result.cosine_similarity      # float
-result.verdict                # "identical" | "very_similar" | "similar" | "related" | "different"
-result.shared_content_words   # Set[str]
-result.to_dict()
-```
-
----
-
-## CorpusAnalyzer
-
-```python
-from aranorm.analysis import CorpusAnalyzer
-
-ca = CorpusAnalyzer()
-result = ca.analyze(["doc 1", "doc 2", ...])
-
-result.document_count           # int
-result.corpus_stop_word_ratio   # float
-result.lexical_diversity        # float
-result.top_content_words        # List[Tuple[str, int]]
-result.top_stop_words           # List[Tuple[str, int]]
-```
-
----
-
-## NormalizationCache
-
-Thread-safe LRU memoization wrapper around any pipeline.
-
-```python
-from aranorm.utils import NormalizationCache
-
-cache = NormalizationCache(pipeline, maxsize=10000)
-
-result = cache.process("text")                          # single
-results = cache.process_batch(["t1", "t2"], batch_size=256, n_workers=4)  # bounded batch
-for result in cache.process_iter(open("texts.txt", encoding="utf-8"), batch_size=256, n_workers=4):
-    print(result.normalized_text)                         # streaming, bounded memory
-
-stats = cache.stats()     # → {"hits": int, "misses": int, "size": int, "maxsize": int}
-cache.clear()             # evict all cached entries
-```
-
----
-
-## BatchExporter
-
-Export a list of `NormalizationResult` objects to multiple formats.
-
-```python
-from aranorm.utils import BatchExporter
-
-exporter = BatchExporter(
-    results,
-    fields=["original_text", "normalized_text", "dialect", "dialect_confidence", "processing_time_ms"],
+from aranorm import (
+    BatchProcessingPolicy,   # mode: "fail_fast" | "collect" | "skip"
+    BatchRetryPolicy,        # max_retries=3 (0-10), batch_size=32, n_workers=1
+    BatchRetryReport,        # results, failed_indices, retry_report, to_dict()
+    CancellationToken,       # cancel(), is_cancelled, raise_if_cancelled()
+    PipelineHooks,           # before_process / after_process / on_error callables
+    BatchProcessingError,    # .failed_indices, .errors, .results (partial)
 )
-
-# Write to files
-exporter.to_csv("output.csv")         # UTF-8-sig for Excel compatibility
-exporter.to_json("output.json")
-exporter.to_jsonl("output.jsonl")
-
-# Get strings (no file I/O)
-csv_str   = exporter.to_csv_string()
-json_str  = exporter.to_json_string()
-jsonl_str = exporter.to_jsonl_string()
-
-# Pandas DataFrame (requires pandas)
-df = exporter.to_dataframe()
 ```
+
+`on_error: ErrorHandler = Callable[[int, str, Exception], Optional[str]]` — return a fallback string or `None` to skip.
 
 ---
 
-## StreamingBatchExporter
+## Runtime & specs
 
-Writes an iterable of normalization results incrementally to a path or an already-open text stream. Use `jsonl` for append-friendly large datasets, `csv` for spreadsheet workflows, or `json` for a valid JSON array.
+### `PipelineRuntime`
 
 ```python
-from aranorm.utils import StreamingBatchExporter
+from aranorm import PipelineRuntime
 
-exporter = StreamingBatchExporter(fields=["original_text", "normalized_text", "dialect"])
-count = exporter.write(
-    pipeline.process_iter(texts, batch_size=256, n_workers=4),
-    "normalized.jsonl",
-    format="jsonl",
+runtime = PipelineRuntime(config)          # or factory=callable
+runtime.process(text)                      # snapshot-consistent
+runtime.process_batch(texts, batch_size=32, n_workers=1)
+runtime.get_pipeline()
+runtime.reload(new_config) -> ReloadResult # atomic; old snapshot kept on failure
+runtime.reload_from_file(path) / runtime.reload_from_spec_file(path)
+runtime.health() -> RuntimeHealth          # .ready, .status ("ready"/"degraded")
+runtime.describe() / runtime.spec() / runtime.generation
+```
+
+### `PipelineSpec` (frozen, schema v1)
+
+`from_pipeline(pipeline, metadata=None)` · `from_dict` / `from_json(text, max_bytes=1MiB)` / `read_file(path)` · `to_pipeline()` (fingerprint-verified) · `to_json()` / `write_file(path)` (atomic). Constants: `PIPELINE_SPEC_SCHEMA_VERSION`, `DEFAULT_MAX_SPEC_BYTES`.
+
+### `PipelineSnapshot`
+
+`config`, `stage_order`, `aranorm_version`, `metadata` + `save/load/diff` — via `snapshot_pipeline(config)` or `aranorm snapshot save|restore`.
+
+---
+
+## Streaming
+
+```python
+from aranorm import StreamingSession, StreamCheckpoint, StreamingSessionReport, fingerprint_file
+
+fingerprint_file(path, chunk_bytes=1_048_576) -> str            # streamed SHA-256
+
+session = StreamingSession(
+    pipeline, source_path, output_path, checkpoint_path,
+    batch_size=32, n_workers=1, on_error=None,
+    cancellation_token=None, max_input_bytes=1_073_741_824, lock_enabled=False,
 )
-print(count)
+report = session.run(resume=True)   # -> StreamingSessionReport(processed_count,
+                                    #    next_index, resumed, completed, cancelled)
 ```
+
+Checkpoint invariants: source SHA-256 + pipeline fingerprint + output path must all match, else `CheckpointError`. Source mutated mid-run → `StreamingSourceChangedError`. Another process holds the lock → `StreamingSessionConflictError`. See the [Streaming guide](streaming.md).
 
 ---
 
-## LanguageDetector
-
-Script-level language/script classification using Unicode character analysis.
-No external dependencies required.
+## Metrics & registry
 
 ```python
-from aranorm.utils import LanguageDetector, detect_language, is_arabic
-
-detector = LanguageDetector()
-
-# Simple API
-label: str = detect_language("شلونك")      # "arabic"
-flag: bool = is_arabic("مرحباً")            # True
-
-# Rich result
-from aranorm.utils import DetectionResult
-
-result: DetectionResult = detector.detect_detailed("7abibi shloak")
-
-result.label          # "arabizi" | "arabic" | "latin" | "mixed" | "numeric" | "unknown"
-result.arabic_ratio   # float
-result.latin_ratio    # float
-result.arabizi_score  # float
-result.char_count     # int
+from aranorm import (
+    ProcessingMetrics,             # record(success=, elapsed_ms=), snapshot(), reset(), merge()
+    ProcessingMetricsSnapshot,     # total_items, succeeded, failed, average_time_ms,
+                                   # throughput_per_second, to_dict/to_json/from_dict
+    ProcessorRegistry,             # register/get/names/contains/snapshot/discover_report
+    ProcessorFactory,              # create(name, **kwargs), available()
+    PluginDiscoveryReport,         # .ok, .discovered, .failures, to_dict()
+)
 ```
 
-**Labels**
-
-| Label | Meaning |
-|-------|---------|
-| `arabic` | Predominantly Arabic script |
-| `arabizi` | Latin-script Arabic (transliteration) |
-| `latin` | Predominantly Latin script |
-| `mixed` | Significant mix of Arabic and Latin |
-| `numeric` | Mostly digits |
-| `unknown` | Cannot classify |
+Plugin discovery: entry-point group `aranorm.processors` (`aranorm plugins --strict`).
 
 ---
 
-## ProgressCallback
-
-Abstract base class for pipeline batch progress reporting.
+## Utils
 
 ```python
 from aranorm.utils import (
-    ProgressCallback,       # ABC
-    NoOpProgressCallback,   # Silent no-op (default)
-    ConsoleProgressCallback,  # ANSI progress bar
-    TqdmProgressCallback,   # tqdm bar (requires tqdm)
+    # Tokenization
+    ArabicTokenizer, word_tokenize, sent_tokenize,        # Token, Sentence dataclasses
+    # Stemming & roots
+    ArabicStemmer, stem, stem_sentence, RootExtractor, extract_root,
+    # Language & keyboards
+    LanguageDetector, detect_language, is_arabic,
+    ArabicKeyboardFixer, fix_keyboard_text,
+    # Fuzzy matching
+    FuzzyArabicMatcher, fuzzy_search, blended_similarity, canonical_form,
+    # Statistics
+    compute_stats, compare_stats,                          # TextStats dataclass
+    # Chunking
+    TextChunker, chunk_text,                               # TextChunk dataclass
+    # Caching
+    NormalizationCache,                                    # LRU + single-flight
+    # Export
+    BatchExporter, StreamingBatchExporter, export_jsonl,   # csv/json/jsonl
+    # Progress
+    ProgressCallback, ConsoleProgressCallback, TqdmProgressCallback, NoOpProgressCallback,
+    # Pure helpers
+    normalize_alef, remove_diacritics, normalize_unicode, collapse_whitespace,
+    strip_punctuation, levenshtein, contains_arabic,
 )
-
-class MyCallback(ProgressCallback):
-    def on_start(self, total: int) -> None: ...
-    def on_item(self, idx: int, text: str, success: bool) -> None: ...
-    def on_finish(self) -> None: ...
-
-# Use with process_batch
-results = pipeline.process_batch(
-    texts,
-    progress_callback=ConsoleProgressCallback(total=len(texts)),
-)
+from aranorm.utils.dialect_depth import DialectAnalyzer, analyze_dialect  # region scoring
+from aranorm.utils.validators import validate_text
 ```
 
----
-
-## Integrations
-
-### `NLTKStopWordsAdapter`
+Highlights:
 
 ```python
-from aranorm.integrations import NLTKStopWordsAdapter
-
-adapter = NLTKStopWordsAdapter()
-
-words: List[str]       = adapter.to_nltk_list()          # sorted list
-words: FrozenSet[str]  = adapter.to_frozenset()          # frozenset
-filtered: List[str]    = adapter.filter_tokens(["أنا", "سعيد"])  # no NLTK needed
-merged: List[str]      = adapter.merge_with_nltk()       # union with NLTK Arabic
-merged                 = adapter.register_with_nltk()    # same + stores on adapter
-```
-
-### `SklearnStopWordsAdapter`
-
-```python
-from aranorm.integrations import SklearnStopWordsAdapter
-
-adapter = SklearnStopWordsAdapter()
-sw_set = adapter.to_sklearn_set()          # frozenset for TfidfVectorizer
-vectorizer = adapter.build_tfidf_vectorizer(...)
-```
-
-### `SpacyStopWordsAdapter`
-
-```python
-from aranorm.integrations import SpacyStopWordsAdapter
-
-adapter = SpacyStopWordsAdapter()
-spacy_set = adapter.to_spacy_set()
-adapter.patch_spacy_model(nlp)    # registers words in a loaded spaCy model
-```
-
-### `PandasNormalizer`
-
-```python
-from aranorm.integrations import PandasNormalizer
-
-pn = PandasNormalizer(pipeline)
-df["normalized"] = pn.transform_series(df["text"])
-result_df = pn.transform_dataframe(df, text_col="text")
-```
-
-### `HuggingFaceNormalizer`
-
-```python
-from aranorm.integrations import HuggingFaceNormalizer
-
-hn = HuggingFaceNormalizer(pipeline)
-# Use as a Hugging Face Dataset map function
-dataset = dataset.map(hn.map_fn, batched=True)
-```
-
----
-
-## Models
-
-### `TransformersSeq2SeqModel`
-
-Lazy-loading Seq2Seq wrapper.  Model is downloaded on first call to
-`predict()` or `predict_batch()`.
-
-```python
-from aranorm.models._transformers_model import TransformersSeq2SeqModel
-
-model = TransformersSeq2SeqModel("Helsinki-NLP/opus-mt-ar-en", max_new_tokens=128)
-
-output: str        = model.predict("مرحباً")
-outputs: List[str] = model.predict_batch(["مرحباً", "كيف حالك"])
-
-model.is_loaded()   # → bool
-model.unload()      # free GPU/CPU memory
-```
-
-### `CODAModel`
-
-```python
-from aranorm.models import CODAModel
-
-# Model name must be provided (no opinionated default)
-model = CODAModel("CAMeL-Lab/arabart")
-normalized: str        = model.normalize("شلونك وايد زين")
-batch: List[str]       = model.normalize_batch(["text1", "text2"])
-```
-
-### `MSAModel`
-
-```python
-from aranorm.models import MSAModel
-
-model = MSAModel("Helsinki-NLP/opus-mt-ar-ar")
-msa: str         = model.normalize("شلونك؟")
-batch: List[str] = model.normalize_batch(["text1", "text2"])
+NormalizationCache(pipeline, maxsize=4096)     # .process (single-flight), .stats(), .invalidate()
+compute_stats(text, top_n=10) -> TextStats     # 18 metrics incl. readability_score
+ArabicStemmer(strip_prefixes=True, strip_suffixes=True).stem("والكتب")  # → كتب
+BatchExporter(results).to_csv/to_json/to_jsonl/to_dataframe
 ```
 
 ---
 
 ## Exceptions
 
-| Exception | Base | When |
-|-----------|------|------|
-| `AraNormError` | `Exception` | All AraNorm errors |
-| `NormalizationError` | `AraNormError` | Processor/model failure |
-| `DialectDetectionError` | `AraNormError` | Dialect ID failure |
-| `InvalidTextError` | `AraNormError, ValueError` | Non-string or empty input |
-| `ProcessorNotFoundError` | `AraNormError, LookupError` | Unknown registry key |
-| `IntegrationUnavailableError` | `AraNormError, RuntimeError` | Missing optional dependency |
-| `ConfigurationError` | `AraNormError, ValueError` | Inconsistent config |
-| `ProcessingTimeoutError` | `AraNormError, RuntimeError` | Exceeded time budget |
-| `DataLoadError` | `AraNormError, IOError` | Missing data file |
-| `BatchProcessingError` | `AraNormError` | Batch partial failure |
+All inherit from `AraNormError` (see the [hierarchy diagram](architecture.md#exception-hierarchy)):
+
+```python
+from aranorm import (
+    AraNormError, NormalizationError, DialectDetectionError, InvalidTextError,
+    ProcessorNotFoundError, IntegrationUnavailableError, ConfigurationError,
+    ProcessingTimeoutError, ProcessingCancelledError, DataLoadError,
+    BatchProcessingError, StreamingSessionError, CheckpointError,
+    StreamingSessionConflictError, StreamingSourceChangedError,
+)
+```
 
 ---
 
-## CLI Reference
+## Models
 
-```
-aranorm <command> [options]
-```
+Optional — require `[ml]` / `[camel]` extras (see the [Integrations guide](integrations.md)):
 
-| Command | Description |
-|---------|-------------|
-| `normalize` | Normalize text or file |
-| `batch` | Bulk normalize with CSV/JSON/JSONL export |
-| `stopwords` | Analyze stop words |
-| `analyze` | Text statistics |
-| `readability` | Compute readability score |
-| `summarize` | Extractive summarization |
-| `sentiment` | Sentiment analysis |
-| `keywords` | Keyword extraction |
-| `dialect` | Dialect identification |
-| `detect` | Script/language detection |
-| `compare` | Similarity between two texts |
-| `tokenize` | Tokenize into words or sentences |
-| `corpus` | Corpus-level analysis from file |
-| `info` | Library version + registry stats |
-| `version` | Print version and exit |
+```python
+from aranorm.models import CODAModel, MSAModel, DialectIDModel
 
-### `normalize`
+coda = CODAModel("CAMeL-Lab/arabart")   # any HF Seq2Seq; downloads on first use
+coda.normalize("شلونك اليوم") -> str
 
-```
-aranorm normalize [TEXT] [--file FILE] [--output OUT]
-                  [--preset {light,standard,deep,social_media}]
-                  [--dialect-target {none,coda,msa}]
-                  [--keep-diacritics] [--keep-urls] [--clean-emojis]
-                  [--stop-words] [--sw-scope SCOPE]
-                  [--workers N] [--json]
-```
+msa = MSAModel("Helsinki-NLP/opus-mt-ar-ar")
+msa.normalize_batch([...]) -> List[str]
 
-### `batch`
-
-```
-aranorm batch --file FILE [--output OUT] [--format {csv,json,jsonl}]
-              [--preset PRESET] [--workers N] [--progress]
-```
-
-### `corpus`
-
-```
-aranorm corpus --file FILE [--top-n N] [--json]
-```
-
-### `readability`
-
-```
-aranorm readability TEXT [--json]
-```
-
-### `summarize`
-
-```
-aranorm summarize [TEXT] [--file FILE] [--max-sentences N] [--json]
-```
-
-### `detect`
-
-```
-aranorm detect TEXT [--json]
-```
-
-### `version`
-
-```
-aranorm version
+did = DialectIDModel(supported_dialects=["EGY", "GLF"])   # needs aranorm[camel]
+did.predict("إزيك عامل إيه") -> ("EGY", 0.9)
 ```

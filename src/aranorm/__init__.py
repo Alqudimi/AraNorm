@@ -130,7 +130,8 @@ from aranorm.exceptions import (
 )
 
 __version__ = "1.15.0"
-__author__ = "AraNorm Contributors"
+__author__ = "Abdulaziz Mohammed Alqudimi"
+__email__ = "eng7mi@gmail.com"
 __license__ = "MIT"
 
 __all__ = [
