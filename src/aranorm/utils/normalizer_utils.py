@@ -98,7 +98,7 @@ def strip_punctuation(text: str) -> str:
     >>> strip_punctuation("؟ النص الجميل!")
     'النص الجميل'
     """
-    return text.strip(".,،؟!؛:()[]{}\"'«»\u2018\u2019\u201C\u201D-–—")
+    return text.strip(".,،؟!؛:()[]{}\"'«»\u2018\u2019\u201c\u201d-–—")
 
 
 def truncate_repeated_chars(text: str, max_run: int = 2) -> str:
@@ -154,7 +154,7 @@ def char_ngrams(text: str, n: int = 3) -> List[str]:
     """
     if len(text) < n:
         return [text] if text else []
-    return [text[i: i + n] for i in range(len(text) - n + 1)]
+    return [text[i : i + n] for i in range(len(text) - n + 1)]
 
 
 def word_ngrams(tokens: List[str], n: int = 2) -> List[str]:
@@ -174,7 +174,7 @@ def word_ngrams(tokens: List[str], n: int = 2) -> List[str]:
     """
     if len(tokens) < n:
         return [" ".join(tokens)] if tokens else []
-    return [" ".join(tokens[i: i + n]) for i in range(len(tokens) - n + 1)]
+    return [" ".join(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
 
 
 def levenshtein(s1: str, s2: str) -> int:

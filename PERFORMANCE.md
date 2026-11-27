@@ -44,16 +44,27 @@ from aranorm.utils.cache import NormalizationCache
 cache = NormalizationCache(pipeline, maxsize=100_000)
 # First call processes; subsequent identical texts return instantly
 result = cache.process(text)
+
+# For large files, keep memory bounded and preserve input order
+with open("texts.txt", encoding="utf-8") as source:
+    for result in cache.process_iter(source, batch_size=256, n_workers=4):
+        consume(result)
 ```
+
+`NormalizationCache.process_iter()` combines LRU reuse with bounded pipeline batches. Choose `maxsize` according to the expected repetition rate; a very large cache is counterproductive for mostly unique inputs.
 
 ### 3. Multi-Threaded Batch Processing
 
 ```python
 # Use n_workers > 1 for I/O-bound workloads or when optional ML models are used
 results = pipeline.process_batch(texts, n_workers=4, batch_size=64)
+
+# Streaming equivalent for generators/files; does not materialize all results
+for result in pipeline.process_iter(texts, n_workers=4, batch_size=64):
+    consume(result)
 ```
 
-Note: due to the GIL, multi-threading benefits most when pipeline stages involve network/disk I/O (e.g., model inference via external services).
+`process_batch()` remains convenient when the result list is needed. Prefer `process_iter()` for unbounded iterables or large files because only the current bounded chunk is materialized. Due to the GIL, multi-threading benefits most when pipeline stages involve I/O or optional model inference; benchmark on the target workload before increasing workers.
 
 ### 4. Disable Unused Pipeline Stages
 
@@ -87,7 +98,18 @@ for text in texts:
 
 All AraNorm processors compile their regex patterns at class instantiation time (not per-call). You get this for free by reusing processor instances.
 
-### 7. Chunking for Large Documents
+### 7. Streaming Large Files
+
+For newline-delimited input, use the CLI streaming path so the source and output are processed incrementally:
+
+```bash
+aranorm batch --file texts.txt --stream --batch-size 256 \\
+  --workers 4 --format jsonl --output normalized.jsonl
+```
+
+`--skip-errors` is useful for noisy production corpora: failed records are reported and skipped while successful records continue. Use JSONL when downstream consumers can process one object at a time; use CSV for spreadsheet workflows and JSON when a single valid array is required.
+
+### 8. Chunking for Large Documents
 
 ```python
 from aranorm.utils.chunker import TextChunker

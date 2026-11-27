@@ -29,9 +29,8 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
-from aranorm.core.stop_words_config import StopWordsConfig
 from aranorm.core.stop_words_registry import StopWordsRegistry
 
 # ── Patterns ──────────────────────────────────────────────────────────────────
@@ -63,6 +62,7 @@ def _sentences(text: str) -> List[str]:
 
 
 # ── Result dataclass ──────────────────────────────────────────────────────────
+
 
 @dataclass
 class SummaryResult:
@@ -98,17 +98,35 @@ class SummaryResult:
     top_keywords: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        """Return a JSON-serialisable dictionary."""
+        """Return a complete, JSON-serialisable dictionary."""
         return {
+            "original_text": self.original_text,
             "summary_text": self.summary_text,
+            "summary_sentences": list(self.summary_sentences),
+            "sentence_scores": dict(self.sentence_scores),
             "original_sentence_count": self.original_sentence_count,
             "summary_sentence_count": self.summary_sentence_count,
             "compression_ratio": self.compression_ratio,
-            "top_keywords": self.top_keywords,
+            "top_keywords": list(self.top_keywords),
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SummaryResult":
+        """Reconstruct a result from :meth:`to_dict` output."""
+        return cls(
+            original_text=str(data.get("original_text", "")),
+            summary_text=str(data.get("summary_text", "")),
+            summary_sentences=list(data.get("summary_sentences", [])),
+            sentence_scores={str(k): float(v) for k, v in data.get("sentence_scores", {}).items()},
+            original_sentence_count=int(data.get("original_sentence_count", 0)),
+            summary_sentence_count=int(data.get("summary_sentence_count", 0)),
+            compression_ratio=float(data.get("compression_ratio", 0.0)),
+            top_keywords=list(data.get("top_keywords", [])),
+        )
 
 
 # ── Summarizer ────────────────────────────────────────────────────────────────
+
 
 class ArabicTextSummarizer:
     """Extractive Arabic text summarizer using TF-IDF sentence scoring.
@@ -225,10 +243,7 @@ class ArabicTextSummarizer:
             for w in set(tokens):
                 df[w] = df.get(w, 0) + 1
 
-        idf: Dict[str, float] = {
-            w: math.log(n / (df[w] + 1)) + 1
-            for w in df
-        }
+        idf: Dict[str, float] = {w: math.log(n / (df[w] + 1)) + 1 for w in df}
 
         # Score each sentence
         scores: Dict[str, float] = {}
@@ -236,10 +251,7 @@ class ArabicTextSummarizer:
             if not tokens:
                 scores[sent] = 0.0
                 continue
-            tf_idf = sum(
-                (tokens.count(w) / len(tokens)) * idf.get(w, 1.0)
-                for w in set(tokens)
-            )
+            tf_idf = sum((tokens.count(w) / len(tokens)) * idf.get(w, 1.0) for w in set(tokens))
             # Position bonus for leading sentences
             pos_factor = self.position_weight if i < max(1, n // 5) else 1.0
             scores[sent] = tf_idf * pos_factor
@@ -254,10 +266,7 @@ class ArabicTextSummarizer:
         selected = [s for s in sents if s in top_k_set]
 
         # Top keywords
-        top_kw = [
-            w for w, _ in sorted(global_freq.items(), key=lambda x: x[1], reverse=True)
-            if len(w) >= 3
-        ][:10]
+        top_kw = [w for w, _ in sorted(global_freq.items(), key=lambda x: x[1], reverse=True) if len(w) >= 3][:10]
 
         return self._build_result(text, sents, selected, scores, top_kw)
 

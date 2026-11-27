@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import FrozenSet, Optional, Set
+from typing import FrozenSet, Optional
 
 
 @dataclass(frozen=True)
@@ -66,14 +66,10 @@ class StopWordsConfig:
     def __post_init__(self) -> None:
         valid_modes = {"remove", "extract", "highlight", "count"}
         if self.mode not in valid_modes:
-            raise ValueError(
-                f"Invalid mode {self.mode!r}. Choose from {sorted(valid_modes)}."
-            )
+            raise ValueError(f"Invalid mode {self.mode!r}. Choose from {sorted(valid_modes)}.")
         valid_scopes = {"universal", "msa_only", "dialect_aware", "custom"}
         if self.scope not in valid_scopes:
-            raise ValueError(
-                f"Invalid scope {self.scope!r}. Choose from {sorted(valid_scopes)}."
-            )
+            raise ValueError(f"Invalid scope {self.scope!r}. Choose from {sorted(valid_scopes)}.")
         valid_dialects = {"EGY", "GLF", "LEV", "IRQ", "NOR", "TUN", "YEM", "MSA"}
         bad = set(self.dialects) - valid_dialects
         if bad:

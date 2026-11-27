@@ -11,15 +11,15 @@ Provides:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, FrozenSet, List, Optional, Set, Tuple
 
 from aranorm.core.stop_words_config import StopWordsConfig
 from aranorm.core.stop_words_registry import StopWordsRegistry
 from aranorm.processors.stop_words_processor import StopWordsProcessor
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _clean_tokens(text: str) -> List[str]:
     """Return stripped, non-empty tokens from *text*."""
@@ -59,6 +59,7 @@ def _jaccard(set_a: Set[str], set_b: Set[str]) -> float:
 
 
 # ── Result dataclass ──────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class SimilarityResult:
@@ -144,6 +145,7 @@ class SimilarityResult:
 
 # ── TextComparator ────────────────────────────────────────────────────────────
 
+
 class TextComparator:
     """Compare two Arabic texts across multiple similarity dimensions.
 
@@ -211,15 +213,11 @@ class TextComparator:
         content_set_b = set(content_b)
 
         content_jaccard = _jaccard(content_set_a, content_set_b)
-        content_cosine = _cosine(
-            _term_frequencies(content_a), _term_frequencies(content_b)
-        )
+        content_cosine = _cosine(_term_frequencies(content_a), _term_frequencies(content_b))
 
         # ── Composite score ───────────────────────────────────────────────
         overall = round(
-            content_cosine * 0.50
-            + content_jaccard * 0.30
-            + jaccard * 0.20,
+            content_cosine * 0.50 + content_jaccard * 0.30 + jaccard * 0.20,
             4,
         )
 
@@ -279,10 +277,7 @@ class TextComparator:
         top_n:
             If given, return only the top-N results.
         """
-        ranked = [
-            (text, self.compare(query, text))
-            for text in candidates
-        ]
+        ranked = [(text, self.compare(query, text)) for text in candidates]
         ranked.sort(key=lambda x: x[1].overall_similarity, reverse=True)
         if top_n is not None:
             return ranked[:top_n]

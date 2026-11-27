@@ -14,6 +14,7 @@ def registry() -> StopWordsRegistry:
 
 # ── Basic MSA lookups ─────────────────────────────────────────────────────────
 
+
 def test_is_stop_msa_preposition(registry: StopWordsRegistry) -> None:
     assert registry.is_stop("من") is True
 
@@ -36,6 +37,7 @@ def test_is_stop_empty(registry: StopWordsRegistry) -> None:
 
 # ── Dialect-specific lookups ──────────────────────────────────────────────────
 
+
 def test_is_stop_dialect_egy(registry: StopWordsRegistry) -> None:
     """Egyptian 'كده' should match EGY dialect."""
     assert registry.is_stop("كده", dialect="EGY") is True
@@ -53,6 +55,7 @@ def test_is_stop_glf_word(registry: StopWordsRegistry) -> None:
 
 # ── Arabizi ───────────────────────────────────────────────────────────────────
 
+
 def test_is_stop_arabizi(registry: StopWordsRegistry) -> None:
     assert registry.is_stop("2na", is_arabizi=True) is True
 
@@ -66,6 +69,7 @@ def test_is_stop_internet(registry: StopWordsRegistry) -> None:
 
 
 # ── get_words ─────────────────────────────────────────────────────────────────
+
 
 def test_get_words_universal_non_empty(registry: StopWordsRegistry) -> None:
     words = registry.get_words("universal")
@@ -85,6 +89,7 @@ def test_get_words_dialect_includes_msa(registry: StopWordsRegistry) -> None:
 
 
 # ── get_by_category ───────────────────────────────────────────────────────────
+
 
 def test_get_by_category_prepositions(registry: StopWordsRegistry) -> None:
     preps = registry.get_by_category("prepositions")
@@ -109,6 +114,7 @@ def test_get_by_category_unknown_returns_empty(registry: StopWordsRegistry) -> N
 
 # ── get_stats ─────────────────────────────────────────────────────────────────
 
+
 def test_get_stats_keys(registry: StopWordsRegistry) -> None:
     stats = registry.get_stats()
     assert "total_universal" in stats
@@ -117,6 +123,7 @@ def test_get_stats_keys(registry: StopWordsRegistry) -> None:
 
 
 # ── Performance ───────────────────────────────────────────────────────────────
+
 
 def test_is_stop_performance(registry: StopWordsRegistry) -> None:
     """is_stop should complete 10 000 lookups in under 100 ms."""

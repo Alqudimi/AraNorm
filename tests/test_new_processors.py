@@ -10,8 +10,8 @@ from aranorm.processors.date_processor import DateTimeProcessor
 from aranorm.processors.phone_processor import PhoneProcessor
 from aranorm.processors.spelling_processor import SpellingProcessor
 
-
 # ── CurrencyProcessor ──────────────────────────────────────────────────────────
+
 
 class TestCurrencyProcessor:
     def test_normalize_arabic_currency(self) -> None:
@@ -57,6 +57,7 @@ class TestCurrencyProcessor:
 
 # ── DateTimeProcessor ─────────────────────────────────────────────────────────
 
+
 class TestDateTimeProcessor:
     def test_normalize_month_name(self) -> None:
         proc = DateTimeProcessor(mode="normalize")
@@ -100,6 +101,7 @@ class TestDateTimeProcessor:
 
 # ── PhoneProcessor ────────────────────────────────────────────────────────────
 
+
 class TestPhoneProcessor:
     def test_remove_mobile_number(self) -> None:
         proc = PhoneProcessor(mode="remove")
@@ -138,6 +140,7 @@ class TestPhoneProcessor:
 
 
 # ── SpellingProcessor ─────────────────────────────────────────────────────────
+
 
 class TestSpellingProcessor:
     def test_corrects_zabtt(self) -> None:

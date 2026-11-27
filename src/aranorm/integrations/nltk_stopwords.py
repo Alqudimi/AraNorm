@@ -131,9 +131,7 @@ class NLTKStopWordsAdapter:
         try:
             from nltk.corpus import stopwords as nltk_sw
         except ImportError as exc:
-            raise IntegrationUnavailableError(
-                "NLTK is not installed. Run: pip install nltk"
-            ) from exc
+            raise IntegrationUnavailableError("NLTK is not installed. Run: pip install nltk") from exc
 
         aranorm_words: Set[str] = self.registry.get_words(scope)
         try:

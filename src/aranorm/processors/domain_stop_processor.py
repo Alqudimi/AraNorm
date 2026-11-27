@@ -8,18 +8,14 @@ This processor loads domain word lists and strips them from the text.
 from __future__ import annotations
 
 import os
-from typing import Dict, FrozenSet, Optional, Set
+from typing import FrozenSet, Optional, Set
 
 from aranorm.core.base import Processor, ProcessorContext
 from aranorm.core.stop_words_registry import StopWordsRegistry
 
-_DOMAIN_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "data", "stopwords", "domains"
-)
+_DOMAIN_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "stopwords", "domains")
 
-_SUPPORTED_DOMAINS: FrozenSet[str] = frozenset(
-    {"legal", "medical", "news", "religious"}
-)
+_SUPPORTED_DOMAINS: FrozenSet[str] = frozenset({"legal", "medical", "news", "religious"})
 
 
 def _load_domain(domain: str) -> Set[str]:
@@ -62,6 +58,7 @@ class DomainStopProcessor(Processor):
         unknown = set(self.domains) - _SUPPORTED_DOMAINS
         if unknown:
             import warnings
+
             warnings.warn(
                 f"Unknown domain(s) {unknown!r}; supported: {sorted(_SUPPORTED_DOMAINS)}",
                 stacklevel=2,

@@ -10,7 +10,7 @@ import re
 from abc import ABC, abstractmethod
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from aranorm.core.base import ProcessorContext
 from aranorm.exceptions import IntegrationUnavailableError, NormalizationError
@@ -29,7 +29,10 @@ def _load_dialect_mappings() -> Dict[str, Dict[str, str]]:
     """Load dialect ↔ MSA mappings from the bundled data file (cached)."""
     path = _DATA_DIR / "dialect_mappings.json"
     with path.open(encoding="utf-8") as fh:
-        return json.load(fh)
+        payload = json.load(fh)
+        if not isinstance(payload, dict):
+            raise ValueError("Dialect mappings must be a JSON object")
+        return cast(Dict[str, Dict[str, str]], payload)
 
 
 def _whole_word_replace(text: str, source: str, target: str) -> str:
@@ -47,6 +50,7 @@ def _whole_word_replace(text: str, source: str, target: str) -> str:
 # Strategy interface
 # ────────────────────────────────────────────────────────────────────────────
 
+
 class DialectStrategy(ABC):
     """Strategy interface for target dialect normalization."""
 
@@ -59,6 +63,7 @@ class DialectStrategy(ABC):
 # Rule-based CODA strategy
 # ────────────────────────────────────────────────────────────────────────────
 
+
 class RuleBasedCODAStrategy(DialectStrategy):
     """Conservative CODA approximation without external dependencies.
 
@@ -70,32 +75,32 @@ class RuleBasedCODAStrategy(DialectStrategy):
     # Ordered list of (source, target) whole-word replacements.
     _REPLACEMENTS: List[Tuple[str, str]] = [
         # Erroneous hamza / alef spellings
-        ("هاذا",     "هذا"),
-        ("هاذه",     "هذه"),
-        ("هاذي",     "هذه"),
-        ("هاذان",    "هذان"),
-        ("هاذين",    "هذين"),
+        ("هاذا", "هذا"),
+        ("هاذه", "هذه"),
+        ("هاذي", "هذه"),
+        ("هاذان", "هذان"),
+        ("هاذين", "هذين"),
         # Common colloquial contractions → standard Arabic
         ("انشاءالله", "إن شاء الله"),
-        ("انشالله",   "إن شاء الله"),
-        ("إنشالله",   "إن شاء الله"),
+        ("انشالله", "إن شاء الله"),
+        ("إنشالله", "إن شاء الله"),
         ("ماشاءالله", "ما شاء الله"),
         ("ماشاء الله", "ما شاء الله"),
         # Dropped initial hamzas on common words
-        ("الاشياء",  "الأشياء"),
-        ("الاسرة",   "الأسرة"),
-        ("الامر",    "الأمر"),
-        ("الاطفال",  "الأطفال"),
-        ("الاخ",     "الأخ"),
-        ("الاخت",    "الأخت"),
-        ("الاب",     "الأب"),
-        ("الام",     "الأم"),
+        ("الاشياء", "الأشياء"),
+        ("الاسرة", "الأسرة"),
+        ("الامر", "الأمر"),
+        ("الاطفال", "الأطفال"),
+        ("الاخ", "الأخ"),
+        ("الاخت", "الأخت"),
+        ("الاب", "الأب"),
+        ("الام", "الأم"),
         # Dropped initial hamzas on standalone words
-        ("اكل",  "أكل"),
-        ("امل",  "أمل"),
+        ("اكل", "أكل"),
+        ("امل", "أمل"),
         ("اكثر", "أكثر"),
-        ("اقل",  "أقل"),
-        ("اهم",  "أهم"),
+        ("اقل", "أقل"),
+        ("اهم", "أهم"),
     ]
 
     def normalize(self, text: str) -> str:
@@ -109,6 +114,7 @@ class RuleBasedCODAStrategy(DialectStrategy):
 # ────────────────────────────────────────────────────────────────────────────
 # Rule-based MSA strategy
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class RuleBasedMSAStrategy(DialectStrategy):
     """Conservative MSA normalization using the bundled dialect mappings.
@@ -140,6 +146,7 @@ class RuleBasedMSAStrategy(DialectStrategy):
 # Transformer-backed strategy (optional)
 # ────────────────────────────────────────────────────────────────────────────
 
+
 class ModelDialectStrategy(DialectStrategy):
     """Lazy Transformers Seq2Seq strategy for CODA/MSA neural normalization.
 
@@ -158,8 +165,8 @@ class ModelDialectStrategy(DialectStrategy):
         self.model_name = model_name
         self.device = device
         self.max_new_tokens = max_new_tokens
-        self._tokenizer = None
-        self._model = None
+        self._tokenizer: Any = None
+        self._model: Any = None
 
     def normalize(self, text: str) -> str:
         """Run the Transformers model, loading it lazily on first call."""
@@ -167,8 +174,7 @@ class ModelDialectStrategy(DialectStrategy):
             from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
         except ImportError as error:
             raise IntegrationUnavailableError(
-                "Transformers is required for model-backed normalization; "
-                "install with: pip install aranorm[ml]"
+                "Transformers is required for model-backed normalization; " "install with: pip install aranorm[ml]"
             ) from error
         try:
             if self._tokenizer is None:
@@ -182,17 +188,19 @@ class ModelDialectStrategy(DialectStrategy):
                 **encoded,
                 max_new_tokens=self.max_new_tokens,
             )
-            return self._tokenizer.decode(generated[0], skip_special_tokens=True)
+            return cast(
+                str,
+                self._tokenizer.decode(generated[0], skip_special_tokens=True),
+            )
         except Exception as error:
             LOGGER.exception("Dialect model normalization failed: %s", self.model_name)
-            raise NormalizationError(
-                f"model normalization failed for '{self.model_name}'"
-            ) from error
+            raise NormalizationError(f"model normalization failed for '{self.model_name}'") from error
 
 
 # ────────────────────────────────────────────────────────────────────────────
 # Normalizer (strategy router)
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class DialectNormalizer:
     """Select and apply a CODA or MSA normalization strategy.
@@ -219,8 +227,7 @@ class DialectNormalizer:
         self.target = target.lower()
         if self.target not in self._VALID_TARGETS:
             raise ValueError(
-                f"unsupported dialect target '{self.target}'; "
-                f"choose from {sorted(self._VALID_TARGETS)}"
+                f"unsupported dialect target '{self.target}'; " f"choose from {sorted(self._VALID_TARGETS)}"
             )
         self._strategies = {
             "coda": coda_strategy or RuleBasedCODAStrategy(),

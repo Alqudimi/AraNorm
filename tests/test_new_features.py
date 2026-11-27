@@ -16,9 +16,6 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from typing import List
-
-import pytest
 
 # ── NumberWordsProcessor ──────────────────────────────────────────────────────
 
@@ -42,6 +39,19 @@ class TestNumberWordsProcessor:
         proc = NumberWordsProcessor()
         result = proc.process("خمسة وعشرون طالباً")
         assert "25" in result
+
+    def test_multiword_lookup_and_spaced_waw_compound(self):
+        from aranorm.processors.number_words_processor import NumberWordsProcessor
+
+        proc = NumberWordsProcessor()
+        assert proc.process("أحد عشر طالباً") == "11 طالباً"
+        assert proc.process("ثلاثة و خمسة كتب") == "8 كتب"
+
+    def test_attached_waw_compound_with_punctuation(self):
+        from aranorm.processors.number_words_processor import NumberWordsProcessor
+
+        proc = NumberWordsProcessor()
+        assert proc.process("خمسة وعشرون، طالباً") == "25 طالباً"
 
     def test_ordinal(self):
         from aranorm.processors.number_words_processor import NumberWordsProcessor
@@ -183,6 +193,7 @@ class TestSentimentAnalyzer:
 
     def test_analysis_exported_from_package(self):
         from aranorm.analysis import SentimentAnalyzer, SentimentResult
+
         assert SentimentAnalyzer is not None
         assert SentimentResult is not None
 
@@ -244,6 +255,7 @@ class TestArabicStemmer:
 
     def test_exported_from_utils(self):
         from aranorm.utils import ArabicStemmer, stem, stem_sentence
+
         assert ArabicStemmer is not None
         assert callable(stem)
         assert callable(stem_sentence)
@@ -280,6 +292,7 @@ class TestRootExtractor:
 
     def test_exported_from_utils(self):
         from aranorm.utils import RootExtractor, extract_root
+
         assert callable(extract_root)
         assert RootExtractor is not None
 
@@ -320,6 +333,22 @@ class TestNormalizerUtils:
         assert is_arabic_text("مرحبا")
         assert not is_arabic_text("hello world")
         assert is_arabic_text("مرحبا hello")  # majority Arabic
+        assert not is_arabic_text("")
+        assert not is_arabic_text("   ")
+
+    def test_punctuation_and_short_ngram_paths(self):
+        from aranorm.utils.normalizer_utils import char_ngrams, strip_punctuation, word_ngrams
+
+        assert strip_punctuation("؟النص الجميل!") == "النص الجميل"
+        assert char_ngrams("كت", n=3) == ["كت"]
+        assert char_ngrams("", n=3) == []
+        assert word_ngrams(["أنا"], n=2) == ["أنا"]
+        assert word_ngrams([], n=2) == []
+
+    def test_levenshtein_empty_right_hand_side(self):
+        from aranorm.utils.normalizer_utils import levenshtein
+
+        assert levenshtein("أنا", "") == 3
 
     def test_count_arabic_words(self):
         from aranorm.utils.normalizer_utils import count_arabic_words
@@ -370,6 +399,20 @@ class TestNormalizerUtils:
         assert truncate_repeated_chars("جمييييل", max_run=2) == "جمييل"
 
 
+# ── Standalone utility edge contracts ─────────────────────────────────────────
+
+
+class TestUtilityEdgeContracts:
+    def test_helpers_handle_arabic_and_blank_parts(self):
+        from aranorm.utils.helpers import contains_arabic, is_arabic_char, join_nonempty
+
+        assert contains_arabic("hello مرحبا")
+        assert not contains_arabic("hello")
+        assert is_arabic_char("م")
+        assert not is_arabic_char("A")
+        assert join_nonempty(["  أنا ", "", "  أحب", "  "]) == "أنا أحب"
+
+
 # ── RedundancyProcessor & SentenceNormalizerProcessor ────────────────────────
 
 
@@ -378,7 +421,7 @@ class TestNormalizationProcessors:
         from aranorm.processors.normalization_processor import RedundancyProcessor
 
         proc = RedundancyProcessor()
-        text = "أنا\u200B طالب\u200D"
+        text = "أنا\u200b طالب\u200d"
         assert proc.process(text) == "أنا طالب"
 
     def test_redundancy_collapses_spaces(self):
@@ -400,12 +443,13 @@ class TestNormalizationProcessors:
         from aranorm.processors.normalization_processor import SentenceNormalizerProcessor
 
         proc = SentenceNormalizerProcessor()
-        text = "أنا\u200E طالب"
+        text = "أنا\u200e طالب"
         result = proc.process(text)
-        assert "\u200E" not in result
+        assert "\u200e" not in result
 
     def test_exported_from_processors(self):
         from aranorm.processors import RedundancyProcessor, SentenceNormalizerProcessor
+
         assert RedundancyProcessor is not None
         assert SentenceNormalizerProcessor is not None
 
@@ -455,14 +499,16 @@ class TestPipelineConfigSerialization:
     def test_from_dict_with_stop_words(self):
         from aranorm import PipelineConfig
 
-        cfg = PipelineConfig.from_dict({
-            "preset": "standard",
-            "stop_words_config": {
-                "mode": "remove",
-                "scope": "universal",
-                "remove_filler": True,
+        cfg = PipelineConfig.from_dict(
+            {
+                "preset": "standard",
+                "stop_words_config": {
+                    "mode": "remove",
+                    "scope": "universal",
+                    "remove_filler": True,
+                },
             }
-        })
+        )
         assert cfg.stop_words_config is not None
         assert cfg.stop_words_config.mode == "remove"
 
@@ -503,17 +549,11 @@ class TestNewCLICommands:
         assert "dialect" in data
 
     def test_keywords_command(self):
-        result = self._run(
-            "keywords",
-            "الاقتصاد العالمي يشهد تحولات جذرية في ظل الأزمات المتعاقبة"
-        )
+        result = self._run("keywords", "الاقتصاد العالمي يشهد تحولات جذرية في ظل الأزمات المتعاقبة")
         assert result.returncode == 0
 
     def test_keywords_json(self):
-        result = self._run(
-            "keywords", "--json",
-            "الاقتصاد العالمي يشهد تحولات جذرية في ظل الأزمات المتعاقبة"
-        )
+        result = self._run("keywords", "--json", "الاقتصاد العالمي يشهد تحولات جذرية في ظل الأزمات المتعاقبة")
         assert result.returncode == 0
         data = json.loads(result.stdout)
         assert isinstance(data, list)
@@ -531,7 +571,8 @@ class TestNewCLICommands:
 
     def test_compare_json(self):
         result = self._run(
-            "compare", "--json",
+            "compare",
+            "--json",
             "أنا أحب العربية",
             "أنا أعشق اللغة العربية",
         )

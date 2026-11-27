@@ -17,20 +17,16 @@ _ARABIC_WORD = re.compile(r"[" + _ARABIC_RANGE + r"]+")
 # ── Sentence boundary characters ───────────────────────────────────────────────
 # Arabic sentence-final punctuation + common Western equivalents
 _SENTENCE_ENDS = re.compile(
-    r"[.!?؟…]+"          # period / bang / question / ellipsis
-    r"|[،؛:]\s{2,}"      # comma/semicolon followed by significant whitespace
-    r"|\n{2,}",           # paragraph breaks
+    r"[.!?؟…]+"  # period / bang / question / ellipsis
+    r"|[،؛:]\s{2,}"  # comma/semicolon followed by significant whitespace
+    r"|\n{2,}",  # paragraph breaks
     re.UNICODE,
 )
 
 # ── Clitic prefixes/suffixes to split off ─────────────────────────────────────
 # This is a conservative list; only unambiguous clitics.
-_CLITIC_PREFIXES = re.compile(
-    r"^(و|ف|ب|ل|ك|وال|فال|بال|لل|وب|وف|فب)(.*)", re.UNICODE
-)
-_CLITIC_SUFFIXES = re.compile(
-    r"(.*?)(ها|هم|هن|هما|كم|كن|كما|ني|نا|ي|ه)$", re.UNICODE
-)
+_CLITIC_PREFIXES = re.compile(r"^(و|ف|ب|ل|ك|وال|فال|بال|لل|وب|وف|فب)(.*)", re.UNICODE)
+_CLITIC_SUFFIXES = re.compile(r"(.*?)(ها|هم|هن|هما|كم|كن|كما|ني|نا|ي|ه)$", re.UNICODE)
 
 
 @dataclass
@@ -81,6 +77,7 @@ class Sentence:
 
 
 # ── Tokenizer ──────────────────────────────────────────────────────────────────
+
 
 class ArabicTokenizer:
     """Tokenize Arabic text into sentences and/or words.
@@ -251,6 +248,7 @@ class ArabicTokenizer:
 
 
 # ── Convenience function ───────────────────────────────────────────────────────
+
 
 def word_tokenize(text: str, split_clitics: bool = False) -> List[str]:
     """Tokenize *text* into a list of Arabic word strings.

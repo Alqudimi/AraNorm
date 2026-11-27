@@ -15,8 +15,8 @@ class StopWordsResult:
     """Detailed stop-words processing result."""
 
     original_text: str
-    processed_text: str            # text after mode applied
-    stop_words_removed: str        # convenience: text with stop words removed
+    processed_text: str  # text after mode applied
+    stop_words_removed: str  # convenience: text with stop words removed
     stop_words_found: Set[str]
     stop_words_stats: Dict[str, Any]
     stop_words_by_category: Dict[str, List[str]]
@@ -125,17 +125,28 @@ class StopWordsProcessor(Processor):
         steps: List[str] = []
 
         # Categorization helpers (loaded lazily once per call)
-        _categories = None
+        _categories: Optional[Dict[str, str]] = None
 
         def _categorise(word: str) -> None:
             nonlocal _categories
             if _categories is None:
                 _categories = {}
                 for cat in [
-                    "prepositions", "pronouns", "conjunctions", "interrogatives",
-                    "demonstratives", "relative_pronouns", "negation", "emphasis",
-                    "particles", "adverbs", "filler", "social_media", "internet",
-                    "arabizi", "numbers",
+                    "prepositions",
+                    "pronouns",
+                    "conjunctions",
+                    "interrogatives",
+                    "demonstratives",
+                    "relative_pronouns",
+                    "negation",
+                    "emphasis",
+                    "particles",
+                    "adverbs",
+                    "filler",
+                    "social_media",
+                    "internet",
+                    "arabizi",
+                    "numbers",
                 ]:
                     for w in self.registry.get_by_category(cat):
                         _categories[w] = cat
@@ -187,9 +198,7 @@ class StopWordsProcessor(Processor):
             "by_category": {k: len(v) for k, v in by_category.items()},
         }
 
-        removed_text = " ".join(
-            t for t in tokens if t.strip(".,،؟!؛:") not in self._active_set
-        )
+        removed_text = " ".join(t for t in tokens if t.strip(".,،؟!؛:") not in self._active_set)
 
         return StopWordsResult(
             original_text=text,

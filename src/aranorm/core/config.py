@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+import os
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 from aranorm.core.stop_words_config import StopWordsConfig  # noqa: F401 (re-exported)
 
@@ -25,6 +26,55 @@ class DialectTarget(str, Enum):
     NONE = "none"
     CODA = "coda"
     MSA = "msa"
+
+
+@dataclass(frozen=True)
+class ResourceLimits:
+    """Defensive runtime limits for text and concurrent batch processing.
+
+    The defaults are intentionally finite so untrusted inputs cannot silently
+    create unbounded CPU, memory, or thread pressure.  Set ``max_text_length``
+    to ``None`` only for a trusted, explicitly managed workload.
+    """
+
+    max_text_length: Optional[int] = 1_000_000
+    max_batch_size: int = 10_000
+    max_workers: int = 64
+    reject_null_bytes: bool = True
+
+    def __post_init__(self) -> None:
+        if self.max_text_length is not None and (
+            not isinstance(self.max_text_length, int)
+            or isinstance(self.max_text_length, bool)
+            or self.max_text_length < 1
+        ):
+            raise ValueError("max_text_length must be a positive integer or None")
+        if not isinstance(self.max_batch_size, int) or isinstance(self.max_batch_size, bool) or self.max_batch_size < 1:
+            raise ValueError("max_batch_size must be a positive integer")
+        if not isinstance(self.max_workers, int) or isinstance(self.max_workers, bool) or self.max_workers < 1:
+            raise ValueError("max_workers must be a positive integer")
+        if not isinstance(self.reject_null_bytes, bool):
+            raise ValueError("reject_null_bytes must be a boolean")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable defensive representation."""
+        return {
+            "max_text_length": self.max_text_length,
+            "max_batch_size": self.max_batch_size,
+            "max_workers": self.max_workers,
+            "reject_null_bytes": self.reject_null_bytes,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ResourceLimits":
+        """Create limits from a strict mapping and reject unknown keys."""
+        if not isinstance(data, dict):
+            raise TypeError("resource_limits must be a dictionary")
+        valid_fields = {"max_text_length", "max_batch_size", "max_workers", "reject_null_bytes"}
+        unknown = sorted(set(data) - valid_fields)
+        if unknown:
+            raise ValueError("Unknown ResourceLimits field(s): " + ", ".join(unknown))
+        return cls(**dict(data))
 
 
 @dataclass
@@ -70,14 +120,23 @@ class PipelineConfig:
     supported_dialects: Optional[List[str]] = field(default=None)
     # Stop-words support – None means disabled
     stop_words_config: Optional[StopWordsConfig] = field(default=None)
+    resource_limits: ResourceLimits = field(default_factory=ResourceLimits)
+    # Operational diagnostics – opt-in to avoid hot-path overhead
+    emit_steps_trace: bool = False
 
     def __post_init__(self) -> None:
         """Normalize enum-like values and apply profile defaults."""
         self.preset = Preset(self.preset)
         self.dialect_target = DialectTarget(self.dialect_target)
+        if isinstance(self.resource_limits, dict):
+            self.resource_limits = ResourceLimits.from_dict(self.resource_limits)
+        elif not isinstance(self.resource_limits, ResourceLimits):
+            raise TypeError("resource_limits must be a ResourceLimits instance or dictionary")
         if self.preset != Preset.STANDARD:
             self._apply_preset_defaults(self.preset)
-        self.supported_dialects = self.supported_dialects or []
+        self.supported_dialects = list(self.supported_dialects or [])
+        if not isinstance(self.emit_steps_trace, bool):
+            raise TypeError("emit_steps_trace must be a boolean")
 
     def _apply_preset_defaults(self, preset: Preset) -> None:
         """Apply only the options that distinguish a built-in preset."""
@@ -156,6 +215,8 @@ class PipelineConfig:
             "remove_english": self.remove_english,
             "fix_spacing": self.fix_spacing,
             "supported_dialects": list(self.supported_dialects or []),
+            "resource_limits": self.resource_limits.to_dict(),
+            "emit_steps_trace": self.emit_steps_trace,
         }
         if self.stop_words_config is not None:
             sw = self.stop_words_config
@@ -176,6 +237,118 @@ class PipelineConfig:
         else:
             data["stop_words_config"] = None
         return data
+
+    def merge(self, overrides: Union["PipelineConfig", Dict[str, Any]]) -> "PipelineConfig":
+        """Return a **new** configuration combining this one with *overrides*.
+
+        Values present in *overrides* replace the matching values of this
+        configuration, while everything else is carried over unchanged.
+        Nested values such as ``stop_words_config`` and ``resource_limits``
+        are merged field-by-field rather than replaced wholesale.
+
+        Parameters
+        ----------
+        overrides:
+            Another :class:`PipelineConfig` instance or a plain dictionary
+            with the same shape as :meth:`to_dict`.
+
+        Returns
+        -------
+        PipelineConfig
+            A fresh configuration — neither this instance nor *overrides*
+            are mutated.
+
+        Raises
+        ------
+        TypeError
+            When *overrides* is neither a :class:`PipelineConfig` nor a
+            dictionary.
+
+        Example
+        -------
+        >>> base = PipelineConfig(preset="light", remove_diacritics=False)
+        >>> merged = base.merge({"remove_diacritics": True})
+        >>> merged.remove_diacritics
+        True
+        >>> merged.preset
+        <Preset.LIGHT: 'light'>
+        """
+        if isinstance(overrides, PipelineConfig):
+            overrides_data = overrides.to_dict()
+        elif isinstance(overrides, dict):
+            overrides_data = dict(overrides)
+        else:
+            raise TypeError("overrides must be a PipelineConfig or a dictionary")
+
+        merged_data = self.to_dict()
+        boolean_keys = {
+            "remove_diacritics",
+            "normalize_hamza",
+            "handle_arabizi",
+            "normalize_unicode",
+            "normalize_alef",
+            "normalize_taa_marbuta",
+            "normalize_alef_maqsura",
+            "normalize_tatweel",
+            "normalize_digits",
+            "normalize_ligatures",
+            "normalize_punctuation",
+            "normalize_whitespace",
+            "normalize_repeated_chars",
+            "remove_extra_punctuation",
+            "clean_urls",
+            "clean_emails",
+            "clean_mentions",
+            "clean_hashtags",
+            "clean_emojis",
+            "clean_html",
+            "remove_non_arabic",
+            "remove_english",
+            "fix_spacing",
+            "emit_steps_trace",
+        }
+        preset_override = overrides_data.pop("preset", None)
+        if preset_override is not None and preset_override != merged_data["preset"]:
+            # A preset change triggers the same defaults that ``__post_init__``
+            # applies, but the caller's explicit overrides still win.
+            merged_data["preset"] = preset_override
+            temp = PipelineConfig.from_dict(merged_data)
+            merged_data = temp.to_dict()
+            for key, value in overrides_data.items():
+                if value is not None:
+                    merged_data[key] = value
+        dialect_override = overrides_data.pop("dialect_target", None)
+        if dialect_override is not None:
+            merged_data["dialect_target"] = dialect_override
+        if "supported_dialects" in overrides_data:
+            merged_data["supported_dialects"] = overrides_data.pop("supported_dialects")
+        stop_words_override = overrides_data.pop("stop_words_config", None)
+        if stop_words_override:
+            sw = merged_data.setdefault("stop_words_config", {})
+            for key, value in stop_words_override.items():
+                if value is not None and isinstance(sw, dict):
+                    sw[key] = value
+        resource_limits_override = overrides_data.pop("resource_limits", None)
+        if resource_limits_override:
+            limits = merged_data.setdefault("resource_limits", {})
+            for key, value in resource_limits_override.items():
+                if value is not None and isinstance(limits, dict):
+                    limits[key] = value
+        explicit_overrides: Dict[str, Any] = {}
+        for key in list(overrides_data):
+            if key in boolean_keys:
+                explicit_overrides[key] = overrides_data.pop(key)
+                merged_data[key] = explicit_overrides[key]
+            else:
+                overrides_data.pop(key, None)
+        # ``from_dict`` re-applies preset defaults inside ``__post_init__``,
+        # which could shadow the caller's explicit overrides (for example,
+        # ``clean_urls`` under the ``light`` preset). Re-applying the
+        # overrides afterwards guarantees they always win.
+        result = PipelineConfig.from_dict(merged_data)
+        for key, value in explicit_overrides.items():
+            setattr(result, key, value)
+        return result
 
     def to_json(self, indent: int = 2, ensure_ascii: bool = False) -> str:
         """Serialise the configuration to a JSON string.
@@ -201,7 +374,9 @@ class PipelineConfig:
         """Create a :class:`PipelineConfig` from a plain dictionary.
 
         Accepts the output of :meth:`to_dict` and any partial config dict
-        (missing keys take default values).
+        (missing keys take default values).  The input mapping is never mutated.
+        Unknown keys are rejected so configuration typos cannot silently change
+        runtime behaviour.
 
         Parameters
         ----------
@@ -214,15 +389,31 @@ class PipelineConfig:
         >>> cfg.preset.value
         'deep'
         """
-        sw_data = data.pop("stop_words_config", None) if isinstance(data, dict) else None
-        data = dict(data)  # make a mutable copy
+        if not isinstance(data, dict):
+            raise TypeError("PipelineConfig.from_dict() expects a dictionary")
 
-        # Remove stop_words_config before passing to constructor (we handle it separately)
-        data.pop("stop_words_config", None)
+        values = dict(data)
+        sw_data = values.pop("stop_words_config", None)
+        limits_data = values.pop("resource_limits", None)
+        trace_data = values.pop("emit_steps_trace", None)
+        if trace_data is not None and not isinstance(trace_data, bool):
+            raise TypeError("emit_steps_trace must be a boolean")
+        if trace_data is not None:
+            values["emit_steps_trace"] = trace_data
+        if limits_data is not None:
+            values["resource_limits"] = (
+                ResourceLimits.from_dict(limits_data) if isinstance(limits_data, dict) else limits_data
+            )
+        valid_fields = set(cls.__dataclass_fields__)
+        unknown = sorted(set(values) - valid_fields)
+        if unknown:
+            raise ValueError("Unknown PipelineConfig field(s): " + ", ".join(unknown))
 
-        config = cls(**{k: v for k, v in data.items() if hasattr(cls, k) or k in cls.__dataclass_fields__})
+        config = cls(**values)
 
         if sw_data is not None:
+            if not isinstance(sw_data, dict):
+                raise TypeError("stop_words_config must be a dictionary or null")
             config.stop_words_config = StopWordsConfig(
                 mode=sw_data.get("mode", "remove"),
                 scope=sw_data.get("scope", "universal"),
@@ -234,8 +425,12 @@ class PipelineConfig:
                 remove_arabizi=sw_data.get("remove_arabizi", False),
                 remove_internet=sw_data.get("remove_internet", False),
                 remove_numbers=sw_data.get("remove_numbers", False),
-                custom_stop_words=frozenset(sw_data["custom_stop_words"]) if sw_data.get("custom_stop_words") else None,
-                excluded_stop_words=frozenset(sw_data["excluded_stop_words"]) if sw_data.get("excluded_stop_words") else None,
+                custom_stop_words=(
+                    frozenset(sw_data["custom_stop_words"]) if sw_data.get("custom_stop_words") else None
+                ),
+                excluded_stop_words=(
+                    frozenset(sw_data["excluded_stop_words"]) if sw_data.get("excluded_stop_words") else None
+                ),
             )
         return config
 
@@ -310,6 +505,7 @@ class PipelineConfig:
         """
         from aranorm.exceptions import ConfigurationError
 
+        self.resource_limits  # force validation for callers mutating legacy config objects
         sw = self.stop_words_config
         if sw is not None:
             if sw.scope == "dialect_aware" and not sw.dialects:
@@ -319,12 +515,12 @@ class PipelineConfig:
                 )
             if sw.scope == "custom" and not sw.custom_stop_words:
                 raise ConfigurationError(
-                    "stop_words_config.scope='custom' requires "
-                    "stop_words_config.custom_stop_words to be non-empty."
+                    "stop_words_config.scope='custom' requires " "stop_words_config.custom_stop_words to be non-empty."
                 )
 
         if self.remove_non_arabic and self.handle_arabizi:
             import warnings
+
             warnings.warn(
                 "remove_non_arabic=True will strip Arabizi (Latin-script Arabic) "
                 "before handle_arabizi can convert it.  Consider setting "
@@ -352,14 +548,15 @@ class PipelineConfig:
         try:
             import yaml
         except ImportError as exc:
-            raise ImportError(
-                "PyYAML is required for to_yaml(). Run: pip install PyYAML"
-            ) from exc
-        return yaml.dump(
-            self.to_dict(),
-            allow_unicode=True,
-            default_flow_style=False,
-            sort_keys=True,
+            raise ImportError("PyYAML is required for to_yaml(). Run: pip install PyYAML") from exc
+        return cast(
+            str,
+            yaml.dump(
+                self.to_dict(),
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=True,
+            ),
         )
 
     @classmethod
@@ -385,14 +582,12 @@ class PipelineConfig:
         try:
             import yaml
         except ImportError as exc:
-            raise ImportError(
-                "PyYAML is required for from_yaml(). Run: pip install PyYAML"
-            ) from exc
+            raise ImportError("PyYAML is required for from_yaml(). Run: pip install PyYAML") from exc
         data = yaml.safe_load(yaml_str) or {}
         return cls.from_dict(data)
 
     @classmethod
-    def from_file(cls, path: str) -> "PipelineConfig":
+    def from_file(cls, path: Union[str, os.PathLike[str]]) -> "PipelineConfig":
         """Load a :class:`PipelineConfig` from a JSON or YAML file.
 
         The format is inferred from the file extension (``.json``, ``.yaml``,
@@ -414,23 +609,21 @@ class PipelineConfig:
         -------
         >>> cfg = PipelineConfig.from_file("config/pipeline.json")
         """
-        import os
-        _, ext = os.path.splitext(path.lower())
-        with open(path, encoding="utf-8") as fh:
+        path_string = os.fspath(path)
+        _, ext = os.path.splitext(path_string.lower())
+        if ext not in (".json", ".yaml", ".yml"):
+            raise ValueError(f"Unsupported config file extension {ext!r}. Use .json, .yaml, or .yml.")
+
+        with open(path_string, encoding="utf-8") as fh:
             content = fh.read()
         if ext == ".json":
             return cls.from_json(content)
-        if ext in (".yaml", ".yml"):
-            return cls.from_yaml(content)
-        raise ValueError(
-            f"Unsupported config file extension {ext!r}. Use .json, .yaml, or .yml."
-        )
+        return cls.from_yaml(content)
 
     def __repr__(self) -> str:
         sw = "enabled" if self.stop_words_config is not None else "disabled"
-        return (
-            f"PipelineConfig("
-            f"preset={self.preset.value if isinstance(self.preset, Preset) else self.preset!r}, "
-            f"dialect_target={self.dialect_target.value if isinstance(self.dialect_target, DialectTarget) else self.dialect_target!r}, "
-            f"stop_words={sw})"
+        preset = self.preset.value if isinstance(self.preset, Preset) else self.preset
+        dialect_target = (
+            self.dialect_target.value if isinstance(self.dialect_target, DialectTarget) else self.dialect_target
         )
+        return f"PipelineConfig(preset={preset!r}, dialect_target={dialect_target!r}, stop_words={sw})"

@@ -24,18 +24,19 @@ True
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Tuple
 
 # ── Unicode ranges ─────────────────────────────────────────────────────────────
 
 # Arabic and Arabic-adjacent Unicode blocks
 _ARABIC_BLOCK = re.compile(
-    r"[\u0600-\u06FF"    # Arabic
-    r"\u0750-\u077F"     # Arabic Supplement
-    r"\u08A0-\u08FF"     # Arabic Extended-A
-    r"\uFB50-\uFDFF"     # Arabic Presentation Forms-A
-    r"\uFE70-\uFEFF]"    # Arabic Presentation Forms-B
+    r"[\u0600-\u06FF"  # Arabic
+    r"\u0750-\u077F"  # Arabic Supplement
+    r"\u08A0-\u08FF"  # Arabic Extended-A
+    r"\uFB50-\uFDFF"  # Arabic Presentation Forms-A
+    r"\uFE70-\uFEFF]"  # Arabic Presentation Forms-B
 )
 
 # Latin (ASCII + Latin Extended)
@@ -47,6 +48,16 @@ _ARABIZI_MARKERS = re.compile(r"\b[2345678][a-z]+\b|\b[a-z]+[2345678][a-z]*\b", 
 
 # Digit-only tokens
 _DIGIT_TOKEN = re.compile(r"^\d+$")
+
+
+def _is_arabic_script_character(char: str) -> bool:
+    """Return whether *char* is an Arabic letter or combining mark."""
+    return bool(_ARABIC_BLOCK.match(char)) and unicodedata.category(char)[0] in {"L", "M"}
+
+
+def _is_latin_script_character(char: str) -> bool:
+    """Return whether *char* is a Latin letter or combining mark."""
+    return bool(_LATIN_BLOCK.match(char)) and unicodedata.category(char)[0] in {"L", "M"}
 
 
 @dataclass(frozen=True)
@@ -165,8 +176,8 @@ class LanguageDetector:
                 char_count=0,
             )
 
-        arabic_chars = sum(1 for c in chars if _ARABIC_BLOCK.match(c))
-        latin_chars = sum(1 for c in chars if _LATIN_BLOCK.match(c))
+        arabic_chars = sum(1 for c in chars if _is_arabic_script_character(c))
+        latin_chars = sum(1 for c in chars if _is_latin_script_character(c))
 
         arabic_ratio = arabic_chars / total
         latin_ratio = latin_chars / total
@@ -175,9 +186,7 @@ class LanguageDetector:
         arabizi_score = self._arabizi_score(text, latin_ratio)
 
         # Classify
-        label, confidence = self._classify(
-            arabic_ratio, latin_ratio, arabizi_score, text
-        )
+        label, confidence = self._classify(arabic_ratio, latin_ratio, arabizi_score, text)
 
         return DetectionResult(
             label=label,
@@ -247,10 +256,10 @@ class LanguageDetector:
         # Look for digit substitutions characteristic of Arabizi
         digit_matches = len(_ARABIZI_MARKERS.findall(text))
         tokens = text.split()
-        if not tokens:
+        if not tokens or digit_matches == 0:
             return 0.0
         digit_ratio = digit_matches / len(tokens)
-        # Arabizi score: combination of Latin ratio and digit-substitution density
+        # A Latin baseline alone is not Arabizi; require a digit substitution.
         score = (latin_ratio * 0.6) + (min(digit_ratio, 1.0) * 0.4)
         return min(score, 1.0)
 

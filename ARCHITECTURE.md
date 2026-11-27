@@ -39,6 +39,7 @@ src/aranorm/
 │   ├── base.py              ← Processor ABC + ProcessorContext
 │   ├── config.py            ← PipelineConfig + enums + serialization
 │   ├── pipeline.py          ← ArabicNormalizationPipeline + NormalizationResult
+│   ├── streaming.py         ← StreamingSession + StreamCheckpoint + reports
 │   ├── registry.py          ← ProcessorRegistry + ProcessorFactory
 │   ├── stop_words_config.py ← StopWordsConfig (immutable dataclass)
 │   └── stop_words_registry.py ← Trie-backed stop-word registry
@@ -57,6 +58,54 @@ src/aranorm/
 ├── exceptions/              ← Exception hierarchy
 └── data/                    ← Bundled JSON and text data files
 ```
+
+### Long-lived service boundary
+
+The core pipeline remains the normalization engine. `PipelineRuntime` is an optional orchestration boundary that owns the currently published pipeline snapshot, generation, reload outcome, and health diagnostics. It does not duplicate processor logic or store user text.
+
+```
+HTTP / CLI adapter (optional)
+          │
+          ▼
+    PipelineRuntime ── atomic publish ──► ArabicNormalizationPipeline snapshot
+          │                                      │
+          ├── health / describe                 └── process / batch / metrics
+          └── config file watcher (optional)
+```
+
+A reload validates and constructs the complete candidate before taking the runtime lock to publish it. Requests that already captured the previous snapshot finish on that object; later requests see the new generation. A failed candidate never replaces the previous snapshot and is represented as `degraded` diagnostics.
+
+The standard-library HTTP adapter in `aranorm.server` is deliberately opt-in. It provides JSON contracts, body-size protection, and basic liveness/readiness endpoints, but it is not a replacement for a production gateway. TLS termination, authentication, authorization, rate limiting, and distributed observability belong outside this module.
+
+### Resumable streaming boundary
+
+`StreamingSession` is an adapter above the existing `ArabicNormalizationPipeline`; it owns file cursors, bounded batches, output commits, and durable progress, while the pipeline remains the only owner of normalization behavior. The session consumes one UTF-8 text item per line and delegates every batch to `process_iter()`, so streaming does not fork or duplicate the core processing path.
+
+```
+source UTF-8 file
+        │ bounded lines
+        ▼
+StreamingSession ── process_iter() ──► pipeline snapshot
+        │                                  │
+        ├── append JSONL output             └── NormalizationResult
+        └── atomic StreamCheckpoint
+```
+
+A checkpoint is accepted only when its version, source/output paths, source SHA-256, pipeline configuration fingerprint, and output offset are valid. Each committed batch is followed by `StreamCheckpoint.write_atomic()`, which writes a same-directory temporary file, flushes and fsyncs it, then publishes it with `os.replace`. Resume truncates the output back to the recorded `output_bytes` offset before continuing, preventing a partially written tail from being duplicated. The bounded checkpoint size and source `max_input_bytes` limit are defensive controls rather than substitutes for filesystem permissions.
+
+The session rejects identical artifact paths and existing-file aliases, including symlinks, before opening output in write mode. This prevents a misconfigured output or checkpoint from truncating the source or destroying the progress marker. When `lock_enabled=True`, a non-blocking Unix advisory lock is acquired beside the checkpoint for the lifetime of the run; a second owner receives `StreamingSessionConflictError` instead of entering a competing writer path. The lock is deliberately local and is not a distributed lease.
+
+The session records a lightweight source signature before iteration and verifies it at safe batch boundaries. A mutation raises `StreamingSourceChangedError` and leaves the last atomically published checkpoint as the recovery point. The content fingerprint remains the authoritative resume identity; the lightweight signature is an early-detection guard against mid-run mutation.
+
+The optional `/v1/stream` HTTP endpoint and CLI `stream` commands are adapters over this same session. The HTTP endpoint is disabled by default because its payload names local filesystem paths; enabling it is an administrator decision and requires an authentication/authorization boundary outside the standard-library adapter. When `streaming_root` is configured, the server resolves and confines source, output, and checkpoint paths under that existing directory, rejects traversal and symlink escapes, and always enables the session lock. Typed conflicts and source mutations are translated to bounded `409` responses; path policy failures use `403`.
+
+### Declarative pipeline specification
+
+`PipelineSpec` is a versioned, JSON-compatible deployment boundary for the declarative portion of a pipeline. It stores the validated `PipelineConfig`, the supported pipeline class, a canonical SHA-256 configuration fingerprint, and bounded diagnostic metadata. It does not serialize processor instances, open resources, callbacks, or mutable runtime state.
+
+The reconstruction path validates the schema version, rejects unknown fields, checks JSON compatibility, rebuilds through `PipelineConfig.from_dict()`, and compares the resulting fingerprint before returning a pipeline. `PipelineSpec.write_file()` uses a unique temporary file followed by an atomic replace; `PipelineRuntime.reload_from_spec_file()` reuses the existing publish-and-rollback path. This keeps persistence and deployment concerns outside the normalization core while making configuration promotion reproducible.
+
+Installed plugins remain a separate extension boundary. A custom processor can be discovered through the documented entry-point group and then explicitly injected by the application; it is never silently reconstructed from untrusted spec metadata.
 
 ---
 
@@ -161,6 +210,10 @@ This means the core library has **zero mandatory runtime dependencies** and can 
 - `NormalizationCache` uses an `RLock` for thread-safe LRU eviction.
 - `StopWordsRegistry` is loaded once and is thereafter read-only.
 - `DialectIdentifier` loads the CAMeL model lazily; concurrent first-calls may race, but subsequent calls are safe.
+- `PipelineRuntime` publishes complete pipeline snapshots under an `RLock`; reload does not mutate a snapshot already captured by a request.
+- `StreamingSession` is instance-local; checkpoint publication is atomic, resume validates source/output/pipeline identity before truncating or appending, and optional local locking prevents competing writers.
+- `StreamingSession` rejects direct or symlink aliases among source/output/checkpoint and detects source mutation at batch boundaries.
+- `ConfigReloadWatcher` is a daemon, opt-in file poller; it reports a failed reload without stopping the service and never runs on import.
 
 ---
 

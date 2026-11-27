@@ -7,7 +7,7 @@ HuggingFace ``Dataset`` or ``DatasetDict`` using ``dataset.map()``.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from aranorm.core.config import PipelineConfig
 from aranorm.exceptions import IntegrationUnavailableError
@@ -39,13 +39,14 @@ class HuggingFaceNormalizer:
 
     def __init__(
         self,
-        pipeline=None,
+        pipeline: Optional[Any] = None,
         batch_size: int = 512,
         num_proc: Optional[int] = None,
     ) -> None:
         self._ensure_datasets()
         if pipeline is None:
             from aranorm.core.pipeline import ArabicNormalizationPipeline
+
             pipeline = ArabicNormalizationPipeline(PipelineConfig())
         self.pipeline = pipeline
         self.batch_size = batch_size
@@ -79,8 +80,7 @@ class HuggingFaceNormalizer:
             from datasets import DatasetDict  # type: ignore
         except ImportError as exc:
             raise IntegrationUnavailableError(
-                "HuggingFace `datasets` is not installed. "
-                "Run: pip install datasets"
+                "HuggingFace `datasets` is not installed. " "Run: pip install datasets"
             ) from exc
 
         out_col = output_column or f"{text_column}_normalized"
@@ -143,7 +143,7 @@ class HuggingFaceNormalizer:
 
     # ── Private ───────────────────────────────────────────────────────────
 
-    def _make_map_fn(self, text_column: str, out_col: str):
+    def _make_map_fn(self, text_column: str, out_col: str) -> Callable[[Dict[str, List[Any]]], Dict[str, List[Any]]]:
         """Return a batched map function for the given columns."""
         pipeline = self.pipeline
 
@@ -160,6 +160,5 @@ class HuggingFaceNormalizer:
             import datasets  # type: ignore  # noqa: F401
         except ImportError as exc:
             raise IntegrationUnavailableError(
-                "HuggingFace `datasets` is not installed. "
-                "Run: pip install datasets"
+                "HuggingFace `datasets` is not installed. " "Run: pip install datasets"
             ) from exc

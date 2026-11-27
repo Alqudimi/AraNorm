@@ -22,17 +22,13 @@ _INTL_PREFIX = r"(?:\+|00)\d{1,3}"
 _PHONE_PATTERN = re.compile(
     r"(?:"
     # International format
-    r"(?:\+|00)\d{1,3}[\s\-\.]?\(?\d{1,4}\)?[\s\-\.]?\d{2,4}[\s\-\.]?\d{2,4}[\s\-\.]?\d{0,4}"
-    r"|"
+    r"(?:\+|00)\d{1,3}[\s\-\.]?\(?\d{1,4}\)?[\s\-\.]?\d{2,4}[\s\-\.]?\d{2,4}[\s\-\.]?\d{0,4}" r"|"
     # Local Gulf/Arab format: 05xxxxxxxx or 5xxxxxxxx
-    r"\b0?[5789]\d[\s\-\.]?\d{3}[\s\-\.]?\d{4}\b"
-    r"|"
+    r"\b0?[5789]\d[\s\-\.]?\d{3}[\s\-\.]?\d{4}\b" r"|"
     # Egypt: 010/011/012/015
-    r"\b0[01]\d[\s\-\.]?\d{4}[\s\-\.]?\d{4}\b"
-    r"|"
+    r"\b0[01]\d[\s\-\.]?\d{4}[\s\-\.]?\d{4}\b" r"|"
     # Landlines: 0X XXXX XXXX
-    r"\b0\d[\s\-\.]?\d{4}[\s\-\.]?\d{4}\b"
-    r")",
+    r"\b0\d[\s\-\.]?\d{4}[\s\-\.]?\d{4}\b" r")",
     re.VERBOSE,
 )
 
@@ -69,6 +65,7 @@ class PhoneProcessor(TextProcessor):
         elif self.mode == "mask":
             result = _PHONE_PATTERN.sub("[PHONE]", text)
         else:  # normalize — strip spaces/dashes and keep digits
+
             def _canonicalize(match: re.Match) -> str:
                 digits = re.sub(r"[^\d+]", "", match.group(0))
                 return digits

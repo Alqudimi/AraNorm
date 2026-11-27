@@ -9,7 +9,7 @@ stop word even if only "كان" is in the base list.
 from __future__ import annotations
 
 import re
-from typing import Dict, Optional, Set
+from typing import Optional, Set
 
 from aranorm.core.base import Processor, ProcessorContext
 from aranorm.core.stop_words_registry import StopWordsRegistry
@@ -18,58 +18,179 @@ from aranorm.core.stop_words_registry import StopWordsRegistry
 
 # Pronominal suffixes attached to verbs / prepositions / nouns
 _PRONOMINAL_SUFFIXES = (
-    "ني", "كَ", "كِ", "كم", "كن", "كما",
-    "ه", "ها", "هم", "هن", "هما",
-    "نا", "ي",
+    "ني",
+    "كَ",
+    "كِ",
+    "كم",
+    "كن",
+    "كما",
+    "ه",
+    "ها",
+    "هم",
+    "هن",
+    "هما",
+    "نا",
+    "ي",
 )
 
 # Common conjugation patterns for auxiliary verbs (كان، ليس…)
 _KANA_FORMS: Set[str] = {
-    "كان", "كانت", "كانوا", "كنت", "كنتُ", "كنتِ", "كنتم", "كنتن",
-    "كنتما", "كنا", "يكون", "تكون", "يكونوا", "تكونوا", "كونوا",
-    "أكون", "نكون",
+    "كان",
+    "كانت",
+    "كانوا",
+    "كنت",
+    "كنتُ",
+    "كنتِ",
+    "كنتم",
+    "كنتن",
+    "كنتما",
+    "كنا",
+    "يكون",
+    "تكون",
+    "يكونوا",
+    "تكونوا",
+    "كونوا",
+    "أكون",
+    "نكون",
 }
 
 _LAYSA_FORMS: Set[str] = {
-    "ليس", "ليست", "لست", "لستَ", "لستِ", "لستم", "لستن", "لستما", "لسنا",
+    "ليس",
+    "ليست",
+    "لست",
+    "لستَ",
+    "لستِ",
+    "لستم",
+    "لستن",
+    "لستما",
+    "لسنا",
     "ليسوا",
 }
 
 _QALA_FORMS: Set[str] = {
-    "قال", "قالت", "قالوا", "قلت", "قلتَ", "قلتِ", "قلتم", "قلتن",
-    "قلتما", "قلنا", "يقول", "تقول", "يقولوا", "تقولوا", "أقول", "نقول",
+    "قال",
+    "قالت",
+    "قالوا",
+    "قلت",
+    "قلتَ",
+    "قلتِ",
+    "قلتم",
+    "قلتن",
+    "قلتما",
+    "قلنا",
+    "يقول",
+    "تقول",
+    "يقولوا",
+    "تقولوا",
+    "أقول",
+    "نقول",
 }
 
 _ANA_FORMS: Set[str] = {
-    "أنا", "أنتَ", "أنتِ", "أنتم", "أنتن", "أنتما",
-    "هو", "هي", "هم", "هن", "هما", "نحن",
+    "أنا",
+    "أنتَ",
+    "أنتِ",
+    "أنتم",
+    "أنتن",
+    "أنتما",
+    "هو",
+    "هي",
+    "هم",
+    "هن",
+    "هما",
+    "نحن",
     # Dialectal
-    "انا", "انت", "انتي", "انتو", "هو", "هي", "احنا", "إحنا",
+    "انا",
+    "انت",
+    "انتي",
+    "انتو",
+    "هو",
+    "هي",
+    "احنا",
+    "إحنا",
 }
 
 _PREPOSITION_FORMS: Set[str] = {
     # في + pronouns
-    "فيه", "فيها", "فيهم", "فيهن", "فيهما", "فينا", "فيك", "فيكم", "فيكن",
+    "فيه",
+    "فيها",
+    "فيهم",
+    "فيهن",
+    "فيهما",
+    "فينا",
+    "فيك",
+    "فيكم",
+    "فيكن",
     # من + pronouns
-    "منه", "منها", "منهم", "منهن", "منهما", "منا", "منك", "منكم", "منكن",
+    "منه",
+    "منها",
+    "منهم",
+    "منهن",
+    "منهما",
+    "منا",
+    "منك",
+    "منكم",
+    "منكن",
     # إلى + pronouns
-    "إليه", "إليها", "إليهم", "إليهن", "إليهما", "إلينا", "إليك", "إليكم",
+    "إليه",
+    "إليها",
+    "إليهم",
+    "إليهن",
+    "إليهما",
+    "إلينا",
+    "إليك",
+    "إليكم",
     # عن + pronouns
-    "عنه", "عنها", "عنهم", "عنهن", "عنهما", "عنا", "عنك", "عنكم",
+    "عنه",
+    "عنها",
+    "عنهم",
+    "عنهن",
+    "عنهما",
+    "عنا",
+    "عنك",
+    "عنكم",
     # على + pronouns
-    "عليه", "عليها", "عليهم", "عليهن", "عليهما", "علينا", "عليك", "عليكم",
+    "عليه",
+    "عليها",
+    "عليهم",
+    "عليهن",
+    "عليهما",
+    "علينا",
+    "عليك",
+    "عليكم",
     # مع + pronouns
-    "معه", "معها", "معهم", "معهن", "معهما", "معنا", "معك", "معكم",
+    "معه",
+    "معها",
+    "معهم",
+    "معهن",
+    "معهما",
+    "معنا",
+    "معك",
+    "معكم",
     # ل + pronouns
-    "له", "لها", "لهم", "لهن", "لهما", "لنا", "لك", "لكم", "لكن",
+    "له",
+    "لها",
+    "لهم",
+    "لهن",
+    "لهما",
+    "لنا",
+    "لك",
+    "لكم",
+    "لكن",
     # ب + pronouns
-    "به", "بها", "بهم", "بهن", "بهما", "بنا", "بك", "بكم", "بكن",
+    "به",
+    "بها",
+    "بهم",
+    "بهن",
+    "بهما",
+    "بنا",
+    "بك",
+    "بكم",
+    "بكن",
 }
 
 # Complete morphological expansion set (union of all tables)
-_ALL_MORPHOLOGICAL_STOPS: Set[str] = (
-    _KANA_FORMS | _LAYSA_FORMS | _QALA_FORMS | _ANA_FORMS | _PREPOSITION_FORMS
-)
+_ALL_MORPHOLOGICAL_STOPS: Set[str] = _KANA_FORMS | _LAYSA_FORMS | _QALA_FORMS | _ANA_FORMS | _PREPOSITION_FORMS
 
 # Definite article variations
 _AL_VARIANTS = re.compile(r"^(ال|ال\u0651)")
@@ -124,16 +245,23 @@ class MorphologicalStopProcessor(Processor):
         kept = []
         for token in tokens:
             raw = token.strip(".,،؟!؛:")
-            # Check raw form
-            if raw in self._stop_set:
-                continue
-            # Check without definite article (e.g. "الكان" → "كان")
-            stripped = _AL_VARIANTS.sub("", raw)
-            if stripped and stripped in self._stop_set:
+            candidates = [raw]
+            # Common conjunction clitics are attached without whitespace. Test
+            # only the two explicit Arabic letters to avoid broad prefix stripping.
+            if len(raw) > 1 and raw[0] in {"و", "ف"}:
+                candidates.append(raw[1:])
+            if any(self._is_stop_form(candidate) for candidate in candidates):
                 continue
             kept.append(token)
         self._record(context)
         return " ".join(kept)
+
+    def _is_stop_form(self, token: str) -> bool:
+        """Return whether *token* is a registered or article-stripped stop form."""
+        if token in self._stop_set:
+            return True
+        stripped = _AL_VARIANTS.sub("", token)
+        return bool(stripped and stripped in self._stop_set)
 
     @property
     def stop_set_size(self) -> int:

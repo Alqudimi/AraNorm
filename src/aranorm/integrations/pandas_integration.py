@@ -8,7 +8,7 @@ DataFrame of full :class:`~aranorm.core.pipeline.NormalizationResult` fields.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from aranorm.core.config import PipelineConfig
 from aranorm.exceptions import IntegrationUnavailableError
@@ -16,7 +16,7 @@ from aranorm.exceptions import IntegrationUnavailableError
 if TYPE_CHECKING:  # pragma: no cover
     import pandas as pd
 
-    from aranorm.core.pipeline import ArabicNormalizationPipeline, NormalizationResult
+    from aranorm.core.pipeline import ArabicNormalizationPipeline
 
 
 class PandasNormalizer:
@@ -51,6 +51,7 @@ class PandasNormalizer:
         self._ensure_pandas()
         if pipeline is None:
             from aranorm.core.pipeline import ArabicNormalizationPipeline
+
             pipeline = ArabicNormalizationPipeline(PipelineConfig())
         self.pipeline = pipeline
         self.n_workers = n_workers
@@ -166,6 +167,4 @@ class PandasNormalizer:
         try:
             import pandas  # noqa: F401
         except ImportError as exc:
-            raise IntegrationUnavailableError(
-                "pandas is not installed. Run: pip install pandas"
-            ) from exc
+            raise IntegrationUnavailableError("pandas is not installed. Run: pip install pandas") from exc

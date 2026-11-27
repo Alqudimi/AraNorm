@@ -1,7 +1,7 @@
 """Internal processor helpers."""
 
 import re
-from typing import Callable, Optional
+from typing import Optional
 
 from aranorm.core.base import Processor, ProcessorContext
 from aranorm.utils.validators import validate_text
@@ -32,8 +32,6 @@ class RegexProcessor(TextProcessor):
         return self.pattern.sub(self.replacement, text)
 
 
-def processor_transform(
-    processor: Processor, text: str, context: Optional[ProcessorContext]
-) -> str:
+def processor_transform(processor: Processor, text: str, context: Optional[ProcessorContext]) -> str:
     """Run a processor without requiring callers to know its concrete type."""
     return processor.process(text, context)

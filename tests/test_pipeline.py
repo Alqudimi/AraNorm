@@ -6,12 +6,12 @@ import pytest
 
 from aranorm import ArabicNormalizationPipeline, NormalizationResult, PipelineConfig
 from aranorm.exceptions import InvalidTextError
-from tests.fixtures.sample_texts import BATCH_1000, DIALECT_MARKERS, EDGE_CASES
-
+from tests.fixtures.sample_texts import BATCH_1000, EDGE_CASES
 
 # ────────────────────────────────────────────────────────────────────────────
 # Basic pipeline behavior
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_pipeline_returns_normalization_result():
     pipeline = ArabicNormalizationPipeline()
@@ -61,6 +61,7 @@ def test_pipeline_returns_result_and_metadata():
 # Preset tests
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_light_preset_is_dependency_free_and_fast():
     pipeline = ArabicNormalizationPipeline(PipelineConfig(preset="light"))
     results = pipeline.process_batch(["أحمد", "إبراهيم", "آمن"], batch_size=2)
@@ -97,6 +98,7 @@ def test_from_preset_classmethod():
 # Dialect targets
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_pipeline_coda_target_populates_coda_text():
     pipeline = ArabicNormalizationPipeline(PipelineConfig(dialect_target="coda"))
     result = pipeline.process("هاذا الاشياء انشاءالله")
@@ -124,11 +126,10 @@ def test_pipeline_no_dialect_target_leaves_both_none():
 # is_msa / dialect properties
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_pipeline_detects_msa_flag():
     pipeline = ArabicNormalizationPipeline()
-    result = pipeline.process(
-        "أعلن الرئيس عن خطة لتطوير القطاع الاقتصادي وبالتالي"
-    )
+    result = pipeline.process("أعلن الرئيس عن خطة لتطوير القطاع الاقتصادي وبالتالي")
     assert result.is_msa is True
 
 
@@ -142,6 +143,7 @@ def test_pipeline_detects_gulf_dialect():
 # ────────────────────────────────────────────────────────────────────────────
 # Batch processing
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_batch_preserves_order_with_workers():
     pipeline = ArabicNormalizationPipeline()
@@ -173,6 +175,7 @@ def test_batch_on_empty_list():
 # Error handling
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_invalid_pipeline_input_raises_domain_error():
     pipeline = ArabicNormalizationPipeline()
     with pytest.raises(InvalidTextError):
@@ -195,6 +198,7 @@ def test_pipeline_handles_edge_cases(text):
 # ────────────────────────────────────────────────────────────────────────────
 # Custom builder
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_custom_builder_creates_target_pipeline():
     pipeline = (
@@ -237,6 +241,7 @@ def test_builder_supports_dialect_list():
 # NormalizationResult properties
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_result_dialect_label_alias():
     pipeline = ArabicNormalizationPipeline()
     result = pipeline.process("شلونك وايد زين")
@@ -252,6 +257,7 @@ def test_result_confidence_score_alias():
 # ────────────────────────────────────────────────────────────────────────────
 # Performance smoke test (light preset)
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_light_preset_processes_1000_texts_under_10s():
     """Smoke test: light preset should handle 1 000 texts well under 10 s."""

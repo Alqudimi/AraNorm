@@ -22,7 +22,8 @@ from __future__ import annotations
 import csv
 import io
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Literal, Optional, Sequence, TextIO, cast
 
 if TYPE_CHECKING:
     from aranorm.core.pipeline import NormalizationResult
@@ -49,10 +50,13 @@ def _result_to_row(
         value = getattr(result, field, None)
         if isinstance(value, (set, frozenset)):
             value = "|".join(sorted(value)) if value else ""
-        elif isinstance(value, list):
+        elif isinstance(value, list) and field != "steps_trace":
             value = "|".join(str(v) for v in value)
         row[field] = value
     return row
+
+
+CsvQuoting = Literal[0, 1, 2, 3]
 
 
 class BatchExporter:
@@ -87,7 +91,7 @@ class BatchExporter:
         path: str,
         encoding: str = "utf-8-sig",
         delimiter: str = ",",
-        quoting: int = csv.QUOTE_MINIMAL,
+        quoting: CsvQuoting = cast(CsvQuoting, csv.QUOTE_MINIMAL),
     ) -> None:
         """Write results to a CSV file.
 
@@ -117,7 +121,7 @@ class BatchExporter:
     def to_csv_string(
         self,
         delimiter: str = ",",
-        quoting: int = csv.QUOTE_MINIMAL,
+        quoting: CsvQuoting = cast(CsvQuoting, csv.QUOTE_MINIMAL),
     ) -> str:
         """Return CSV output as a string (useful for in-memory processing).
 
@@ -204,11 +208,7 @@ class BatchExporter:
         """
         with open(path, "w", encoding="utf-8") as fh:
             for result in self.results:
-                fh.write(
-                    json.dumps(
-                        result.to_dict(), ensure_ascii=ensure_ascii
-                    ) + "\n"
-                )
+                fh.write(json.dumps(result.to_dict(), ensure_ascii=ensure_ascii) + "\n")
 
     def to_jsonl_string(self, ensure_ascii: bool = False) -> str:
         """Return results as a JSONL string.
@@ -218,10 +218,7 @@ class BatchExporter:
         ensure_ascii:
             Preserve Arabic characters when *False* (default).
         """
-        lines = [
-            json.dumps(r.to_dict(), ensure_ascii=ensure_ascii)
-            for r in self.results
-        ]
+        lines = [json.dumps(r.to_dict(), ensure_ascii=ensure_ascii) for r in self.results]
         return "\n".join(lines) + ("\n" if lines else "")
 
     # ── Pandas (optional) ─────────────────────────────────────────────────
@@ -237,9 +234,7 @@ class BatchExporter:
         try:
             import pandas as pd  # type: ignore
         except ImportError as exc:
-            raise ImportError(
-                "pandas is required for to_dataframe(). Run: pip install pandas"
-            ) from exc
+            raise ImportError("pandas is required for to_dataframe(). Run: pip install pandas") from exc
 
         rows = [_result_to_row(r, self.fields) for r in self.results]
         return pd.DataFrame(rows, columns=self.fields)
@@ -254,3 +249,151 @@ class BatchExporter:
 
     def __repr__(self) -> str:
         return f"BatchExporter(results={len(self.results)}, fields={self.fields})"
+
+
+@contextmanager
+def _open_output(target: Any, encoding: str, newline: str = "") -> Iterator[TextIO]:
+    """Yield a writable text stream and close it only when opened here."""
+    if hasattr(target, "write"):
+        yield cast(TextIO, target)
+        return
+
+    with open(target, "w", encoding=encoding, newline=newline) as stream:
+        yield stream
+
+
+class StreamingBatchExporter:
+    """Write normalization results incrementally without materializing a batch.
+
+    This exporter is designed for generators and large JSONL/text files. It accepts
+    either a filesystem path or an already-open text stream and returns the number
+    of rows written. JSON output is emitted as a valid array incrementally, while
+    JSONL and CSV are written record-by-record.
+    """
+
+    def __init__(self, fields: Optional[List[str]] = None) -> None:
+        self.fields = fields or list(_DEFAULT_FIELDS)
+
+    def write_jsonl(
+        self,
+        results: Iterable["NormalizationResult"],
+        target: Any,
+        ensure_ascii: bool = False,
+    ) -> int:
+        """Write one JSON object per line and return the number of rows."""
+        count = 0
+        with _open_output(target, encoding="utf-8") as stream:
+            for result in results:
+                stream.write(json.dumps(result.to_dict(), ensure_ascii=ensure_ascii) + "\n")
+                count += 1
+        return count
+
+    def write_csv(
+        self,
+        results: Iterable["NormalizationResult"],
+        target: Any,
+        encoding: str = "utf-8-sig",
+        delimiter: str = ",",
+        quoting: CsvQuoting = cast(CsvQuoting, csv.QUOTE_MINIMAL),
+    ) -> int:
+        """Write CSV rows incrementally and return the number of data rows."""
+        count = 0
+        with _open_output(target, encoding=encoding, newline="") as stream:
+            writer = csv.DictWriter(
+                stream,
+                fieldnames=self.fields,
+                delimiter=delimiter,
+                quoting=quoting,
+            )
+            writer.writeheader()
+            for result in results:
+                writer.writerow(_result_to_row(result, self.fields))
+                count += 1
+        return count
+
+    def write_json(
+        self,
+        results: Iterable["NormalizationResult"],
+        target: Any,
+        ensure_ascii: bool = False,
+        indent: Optional[int] = None,
+    ) -> int:
+        """Write a valid JSON array incrementally and return the row count."""
+        count = 0
+        with _open_output(target, encoding="utf-8") as stream:
+            stream.write("[\n" if indent is not None else "[")
+            for result in results:
+                if count:
+                    stream.write(",\n" if indent is not None else ",")
+                payload = _result_to_row(result, self.fields)
+                stream.write(json.dumps(payload, ensure_ascii=ensure_ascii, indent=indent))
+                count += 1
+            stream.write("\n]" if indent is not None else "]")
+        return count
+
+    def write(
+        self,
+        results: Iterable["NormalizationResult"],
+        target: Any,
+        format: Literal["csv", "json", "jsonl"] = "jsonl",
+        ensure_ascii: bool = False,
+    ) -> int:
+        """Write using the requested format and return the number of rows."""
+        if format == "csv":
+            return self.write_csv(results, target)
+        if format == "json":
+            return self.write_json(results, target, ensure_ascii=ensure_ascii, indent=2)
+        if format == "jsonl":
+            return self.write_jsonl(results, target, ensure_ascii=ensure_ascii)
+        raise ValueError("format must be one of: csv, json, jsonl")
+
+    def __repr__(self) -> str:
+        return f"StreamingBatchExporter(fields={self.fields})"
+
+
+def export_jsonl(
+    results: Iterable["NormalizationResult"],
+    target: Any,
+    fields: Optional[List[str]] = None,
+    ensure_ascii: bool = False,
+) -> int:
+    """Export *results* as a JSON Lines file with a given field subset.
+
+    This module-level convenience wrapper combines the streaming exporter
+    with a field projection: each output line contains only the requested
+    fields in insertion order, which keeps payloads compact when the full
+    result dictionary is not needed.
+
+    Parameters
+    ----------
+    results:
+        Iterable of :class:`NormalizationResult` objects (e.g. from
+        ``pipeline.process_batch``).
+    target:
+        Destination filesystem path or any object exposing a ``write``
+        method.
+    fields:
+        Subset of fields to emit per line. When *None*, a sensible default
+        set is used (see :data:`_DEFAULT_FIELDS`).
+    ensure_ascii:
+        Preserve Arabic characters when *False* (default).
+
+    Returns
+    -------
+    int
+        Number of JSON lines written.
+
+    Example
+    -------
+    >>> exporter = export_jsonl(results, "out.jsonl", fields=["original_text", "normalized_text", "dialect"])
+    >>> exporter >= 1
+    True
+    """
+    exporter = StreamingBatchExporter(fields=fields)
+    rows = ({key: row[key] for key in exporter.fields} for row in (_result_to_row(r, exporter.fields) for r in results))
+    count = 0
+    with _open_output(target, encoding="utf-8") as stream:
+        for row in rows:
+            stream.write(json.dumps(row, ensure_ascii=ensure_ascii) + "\n")
+            count += 1
+    return count

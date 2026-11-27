@@ -142,10 +142,7 @@ class ConsoleProgressCallback(ProgressCallback):
 
         bar = "█" * filled + "░" * (self.width - filled)
         elapsed = time.perf_counter() - (self._start_time or time.perf_counter())
-        self._file.write(
-            f"\r{self.prefix}: {pct:4.0%}|{bar}| {self._done}/{self.total} "
-            f"[{elapsed:.1f}s]"
-        )
+        self._file.write(f"\r{self.prefix}: {pct:4.0%}|{bar}| {self._done}/{self.total} " f"[{elapsed:.1f}s]")
         self._file.flush()
 
 
@@ -167,9 +164,7 @@ class TqdmProgressCallback(ProgressCallback):
         try:
             from tqdm import tqdm  # type: ignore[import-untyped]
         except ImportError as exc:
-            raise ImportError(
-                "tqdm is required for TqdmProgressCallback. Run: pip install tqdm"
-            ) from exc
+            raise ImportError("tqdm is required for TqdmProgressCallback. Run: pip install tqdm") from exc
         self._tqdm_cls = tqdm
         self._tqdm_kwargs = tqdm_kwargs
         self._bar: Any = None

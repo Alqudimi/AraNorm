@@ -7,7 +7,7 @@ import json
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict
+from typing import Dict, cast
 
 from aranorm.processors._base import TextProcessor
 
@@ -19,7 +19,10 @@ def _load_chat_abbreviations() -> Dict[str, str]:
     """Load chat abbreviations mapping (cached on first call)."""
     path = _DATA_DIR / "chat_abbreviations.json"
     with path.open(encoding="utf-8") as fh:
-        return json.load(fh)
+        payload = json.load(fh)
+        if not isinstance(payload, dict):
+            raise ValueError("Chat abbreviations must be a JSON object")
+        return cast(Dict[str, str], payload)
 
 
 def _whole_word_replace(text: str, source: str, target: str) -> str:

@@ -19,8 +19,7 @@ class MorphologicalProcessor:
         """
         if self.analyzer is None:
             raise IntegrationUnavailableError(
-                "No morphological analyzer configured. Inject a Farasa, Qalsadi, "
-                "or CAMeL-compatible analyzer."
+                "No morphological analyzer configured. Inject a Farasa, Qalsadi, " "or CAMeL-compatible analyzer."
             )
         if hasattr(self.analyzer, "analyze"):
             result = self.analyzer.analyze(text)

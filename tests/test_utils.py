@@ -8,8 +8,8 @@ from aranorm.utils.tokenizer import ArabicTokenizer, Token, Sentence, word_token
 from aranorm.utils.text_stats import TextStats, compute_stats, compare_stats
 from aranorm.utils.chunker import TextChunker, TextChunk, chunk_text
 
-
 # ── ArabicTokenizer ────────────────────────────────────────────────────────────
+
 
 class TestArabicTokenizer:
     def test_tokenize_basic(self) -> None:
@@ -77,6 +77,7 @@ class TestArabicTokenizer:
 
 # ── TextStats ─────────────────────────────────────────────────────────────────
 
+
 class TestTextStats:
     def test_compute_stats_returns_textstats(self) -> None:
         stats = compute_stats("أنا أحب اللغة العربية")
@@ -108,9 +109,23 @@ class TestTextStats:
 
     def test_readability_label_valid(self) -> None:
         stats = compute_stats("أنا سعيد")
-        assert stats.readability_label in (
-            "very_easy", "easy", "moderate", "difficult", "very_difficult"
-        )
+        assert stats.readability_label in ("very_easy", "easy", "moderate", "difficult", "very_difficult")
+
+    def test_readability_threshold_labels(self) -> None:
+        from aranorm.utils.text_stats import _readability_label
+
+        assert [_readability_label(score) for score in (80, 60, 40, 20, 19.9)] == [
+            "very_easy",
+            "easy",
+            "moderate",
+            "difficult",
+            "very_difficult",
+        ]
+
+    def test_readability_penalizes_long_diacritized_text(self) -> None:
+        stats = compute_stats("مَرْحَبًا " * 10)
+        assert stats.readability_score < 100.0
+        assert stats.diacritic_ratio > 0.0
 
     def test_top_words_sorted_by_frequency(self) -> None:
         stats = compute_stats("سلام سلام سلام مرحبا مرحبا عالم")
@@ -139,6 +154,7 @@ class TestTextStats:
 
 
 # ── TextChunker ───────────────────────────────────────────────────────────────
+
 
 class TestTextChunker:
     def test_chunk_short_text_returns_one_chunk(self) -> None:

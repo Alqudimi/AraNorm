@@ -31,7 +31,9 @@ from __future__ import annotations
 
 import threading
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Dict, List, Sequence
+from itertools import islice
+from concurrent.futures import Future
+from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, Sequence
 
 if TYPE_CHECKING:
     from aranorm.core.pipeline import ArabicNormalizationPipeline, NormalizationResult
@@ -68,6 +70,7 @@ class NormalizationCache:
         self.maxsize = maxsize
         self._lock: threading.RLock = threading.RLock()
         self._cache: OrderedDict[str, "NormalizationResult"] = OrderedDict()
+        self._inflight: Dict[str, Future["NormalizationResult"]] = {}
         self._hits: int = 0
         self._misses: int = 0
 
@@ -91,25 +94,43 @@ class NormalizationCache:
                 self._cache.move_to_end(text)
                 self._hits += 1
                 return self._cache[text]
+            future = self._inflight.get(text)
+            is_owner = future is None
+            if is_owner:
+                future = Future()
+                self._inflight[text] = future
 
-        # Compute outside the lock to avoid blocking concurrent callers
-        result = self.pipeline.process(text)
+        if not is_owner:
+            assert future is not None
+            result = future.result()
+            with self._lock:
+                self._hits += 1
+            return result
+
+        assert future is not None
+        # Compute outside the lock while concurrent callers wait on the Future.
+        try:
+            result = self.pipeline.process(text)
+        except BaseException as exc:
+            with self._lock:
+                future.set_exception(exc)
+                self._inflight.pop(text, None)
+            raise
 
         with self._lock:
-            # Another thread may have inserted while we were computing
-            if text not in self._cache:
-                if len(self._cache) >= self.maxsize:
-                    self._cache.popitem(last=False)  # evict LRU
-                self._cache[text] = result
-            else:
-                self._cache.move_to_end(text)
+            if len(self._cache) >= self.maxsize:
+                self._cache.popitem(last=False)  # evict LRU
+            self._cache[text] = result
             self._misses += 1
-            return self._cache[text]
+            future.set_result(result)
+            self._inflight.pop(text, None)
+            return result
 
     def process_batch(
         self,
         texts: Sequence[str],
         n_workers: int = 1,
+        batch_size: int = 32,
     ) -> List["NormalizationResult"]:
         """Process a batch, serving cached results and computing only misses.
 
@@ -119,12 +140,18 @@ class NormalizationCache:
             Sequence of Arabic strings.
         n_workers:
             Worker count passed to the underlying pipeline for uncached texts.
+        batch_size:
+            Maximum number of uncached texts submitted to the pipeline at once.
 
         Returns
         -------
         List[NormalizationResult]
             Results in the same order as *texts*.
         """
+        if batch_size < 1:
+            raise ValueError("batch_size must be positive")
+        if n_workers < 1:
+            raise ValueError("n_workers must be positive")
         texts_list = list(texts)
         results: Dict[int, "NormalizationResult"] = {}
         miss_indices: List[int] = []
@@ -143,7 +170,11 @@ class NormalizationCache:
 
         # Compute misses via the underlying pipeline
         if miss_texts:
-            computed = self.pipeline.process_batch(miss_texts, n_workers=n_workers)
+            computed = self.pipeline.process_batch(
+                miss_texts,
+                batch_size=batch_size,
+                n_workers=n_workers,
+            )
             with self._lock:
                 for idx, (i, text) in enumerate(zip(miss_indices, miss_texts)):
                     result = computed[idx]
@@ -155,6 +186,25 @@ class NormalizationCache:
                     self._misses += 1
 
         return [results[i] for i in range(len(texts_list))]
+
+    def process_iter(
+        self,
+        texts: Iterable[str],
+        n_workers: int = 1,
+        batch_size: int = 32,
+    ) -> Iterator["NormalizationResult"]:
+        """Yield cached or normalized results from an iterable in bounded chunks."""
+        if batch_size < 1:
+            raise ValueError("batch_size must be positive")
+        if n_workers < 1:
+            raise ValueError("n_workers must be positive")
+
+        iterator = iter(texts)
+        while True:
+            chunk = list(islice(iterator, batch_size))
+            if not chunk:
+                break
+            yield from self.process_batch(chunk, n_workers=n_workers, batch_size=batch_size)
 
     def invalidate(self, text: str) -> bool:
         """Remove one entry from the cache.
@@ -196,15 +246,13 @@ class NormalizationCache:
             }
 
     def __len__(self) -> int:
-        return len(self._cache)
+        with self._lock:
+            return len(self._cache)
 
     def __contains__(self, text: object) -> bool:
-        return text in self._cache
+        with self._lock:
+            return text in self._cache
 
     def __repr__(self) -> str:
         s = self.stats()
-        return (
-            f"NormalizationCache("
-            f"size={s['size']}/{s['maxsize']}, "
-            f"hit_rate={s['hit_rate']:.1%})"
-        )
+        return f"NormalizationCache(" f"size={s['size']}/{s['maxsize']}, " f"hit_rate={s['hit_rate']:.1%})"

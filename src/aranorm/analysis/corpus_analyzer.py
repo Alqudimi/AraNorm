@@ -1,9 +1,9 @@
 """Corpus-level analysis: stop-word statistics across multiple texts.
 
-Provides two public classes:
-
-* :class:`CorpusAnalyzer` — aggregate stop-word / content-word statistics
-  across a collection of texts.
+Provides three public classes:
+* :class:`CorpusAnalyzer` — aggregate stop-word / content-word statistics,
+  pairwise overlap, and per-document distinctiveness across a collection
+  of texts.
 * :class:`CorpusStopWordsBuilder` — derive a custom stop-word list from a
   corpus by ranking words by document frequency and inverse content value.
 """
@@ -12,15 +12,15 @@ from __future__ import annotations
 
 import math
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
 
 from aranorm.core.stop_words_config import StopWordsConfig
 from aranorm.core.stop_words_registry import StopWordsRegistry
 from aranorm.processors.stop_words_processor import StopWordsProcessor
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _tokens(text: str) -> List[str]:
     """Return cleaned token list (strips punctuation, lowercases)."""
@@ -28,6 +28,7 @@ def _tokens(text: str) -> List[str]:
 
 
 # ── Result dataclasses ────────────────────────────────────────────────────────
+
 
 @dataclass
 class DocumentStats:
@@ -54,11 +55,11 @@ class CorpusAnalysisResult:
     corpus_stop_word_ratio: float
 
     # Frequency tables
-    stop_word_frequency: Dict[str, int]     # how often each stop word appears
+    stop_word_frequency: Dict[str, int]  # how often each stop word appears
     content_word_frequency: Dict[str, int]  # how often each content word appears
-    document_frequency: Dict[str, int]      # how many docs contain each word
-    top_stop_words: List[Tuple[str, int]]   # top-N most frequent stop words
-    top_content_words: List[Tuple[str, int]]# top-N most frequent content words
+    document_frequency: Dict[str, int]  # how many docs contain each word
+    top_stop_words: List[Tuple[str, int]]  # top-N most frequent stop words
+    top_content_words: List[Tuple[str, int]]  # top-N most frequent content words
 
     # Per-document breakdown
     documents: List[DocumentStats]
@@ -67,7 +68,84 @@ class CorpusAnalysisResult:
     stop_word_vocabulary_size: int
     content_word_vocabulary_size: int
     average_stop_word_ratio: float
-    lexical_diversity: float                # unique content words / total content tokens
+    lexical_diversity: float  # unique content words / total content tokens
+
+
+@dataclass
+class DocumentDistinctiveness:
+    """Per-document distinctiveness within a corpus.
+
+    Measures how *unique* a document's content vocabulary is compared to the
+    rest of the corpus, using the Jaccard distance against the corpus-wide
+    union of content vocabulary.
+
+    Attributes
+    ----------
+    index:
+        Zero-based document index within the analyzed corpus.
+    only_in_this_document:
+        Content words that appear in this document but in no other
+        document in the corpus.
+    shared_vocabulary:
+        Content words this document shares with other documents.
+    distinctiveness:
+        Share (0.0–1.0) of the document's content vocabulary that is
+        exclusive to this document. Higher means more distinctive.
+    """
+
+    index: int
+    only_in_this_document: List[str]
+    shared_vocabulary: List[str]
+    distinctiveness: float
+
+    def to_dict(self) -> Dict[str, object]:
+        return {
+            "index": self.index,
+            "only_in_this_document": self.only_in_this_document,
+            "shared_vocabulary": self.shared_vocabulary,
+            "distinctiveness": self.distinctiveness,
+        }
+
+
+@dataclass
+class OverlapAnalysisResult:
+    """Pairwise lexical overlap between documents in a corpus.
+
+    Attributes
+    ----------
+    document_count:
+        Number of documents analyzed.
+    overlap_matrix:
+        Upper-triangular Jaccard similarity matrix as a flat dict keyed by
+        ``"i,j"`` (i < j). Values in 0.0–1.0.
+    most_similar_pair:
+        ``(i, j, similarity)`` for the pair with the highest overlap, or
+        ``None`` when the corpus has fewer than two documents.
+    least_similar_pair:
+        ``(i, j, similarity)`` for the pair with the lowest overlap, or
+        ``None`` when the corpus has fewer than two documents.
+    average_similarity:
+        Mean of all pairwise similarities, 0.0 when trivially undefined.
+    distinctiveness:
+        Per-document distinctiveness scores.
+    """
+
+    document_count: int
+    overlap_matrix: Dict[str, float]
+    most_similar_pair: Optional[Tuple[int, int, float]]
+    least_similar_pair: Optional[Tuple[int, int, float]]
+    average_similarity: float
+    distinctiveness: List[DocumentDistinctiveness]
+
+    def to_dict(self) -> Dict[str, object]:
+        return {
+            "document_count": self.document_count,
+            "overlap_matrix": {k: v for k, v in self.overlap_matrix.items()},
+            "most_similar_pair": list(self.most_similar_pair) if self.most_similar_pair else None,
+            "least_similar_pair": list(self.least_similar_pair) if self.least_similar_pair else None,
+            "average_similarity": self.average_similarity,
+            "distinctiveness": [d.to_dict() for d in self.distinctiveness],
+        }
 
 
 @dataclass
@@ -75,13 +153,14 @@ class CorpusStopWordsResult:
     """Output from :class:`CorpusStopWordsBuilder`."""
 
     extracted_stop_words: FrozenSet[str]
-    candidate_scores: List[Tuple[str, float]]   # (word, score) sorted descending
+    candidate_scores: List[Tuple[str, float]]  # (word, score) sorted descending
     corpus_size: int
     vocabulary_size: int
     threshold_used: float
 
 
 # ── CorpusAnalyzer ────────────────────────────────────────────────────────────
+
 
 class CorpusAnalyzer:
     """Aggregate stop-word and content-word statistics across a corpus.
@@ -171,9 +250,7 @@ class CorpusAnalyzer:
             )
 
         corpus_stop_ratio = round(total_stops / total_tokens, 4) if total_tokens else 0.0
-        avg_stop_ratio = round(
-            sum(d.stop_word_ratio for d in documents) / doc_count, 4
-        )
+        avg_stop_ratio = round(sum(d.stop_word_ratio for d in documents) / doc_count, 4)
         unique_content = len(content_freq)
         total_content_tokens = sum(content_freq.values())
         diversity = round(unique_content / total_content_tokens, 4) if total_content_tokens else 0.0
@@ -196,6 +273,81 @@ class CorpusAnalyzer:
             lexical_diversity=diversity,
         )
 
+    def overlap_analysis(self, texts: Iterable[str]) -> OverlapAnalysisResult:
+        """Pairwise lexical overlap and per-document distinctiveness.
+
+        Computes the Jaccard similarity between each document pair's content
+        vocabulary (after stop-word removal), plus a distinctiveness score
+        for every document: how far its vocabulary sits from the corpus-wide
+        vocabulary union.
+
+        Documents that fail the normal text filter (empty/whitespace-only)
+        are skipped, so the resulting indices refer to the filtered corpus.
+        """
+        text_list = [t for t in texts if isinstance(t, str) and t.strip()]
+        if len(text_list) < 2:
+            return OverlapAnalysisResult(
+                document_count=len(text_list),
+                overlap_matrix={},
+                most_similar_pair=None,
+                least_similar_pair=None,
+                average_similarity=0.0,
+                distinctiveness=[],
+            )
+
+        vocabularies: List[Set[str]] = []
+        for text in text_list:
+            content_words = [t for t in _tokens(self.processor.process_detailed(text).stop_words_removed) if t]
+            vocabularies.append(set(content_words))
+
+        overlap_matrix: Dict[str, float] = {}
+        similarities: List[float] = []
+        for i in range(len(text_list)):
+            for j in range(i + 1, len(text_list)):
+                inter = vocabularies[i] & vocabularies[j]
+                union = vocabularies[i] | vocabularies[j]
+                similarity = len(inter) / len(union) if union else 0.0
+                overlap_matrix[f"{i},{j}"] = round(similarity, 4)
+                similarities.append(similarity)
+
+        most = max(enumerate(similarities), key=lambda item: item[1])
+        least = min(enumerate(similarities), key=lambda item: item[1])
+        average = round(sum(similarities) / len(similarities), 4) if similarities else 0.0
+
+        distinctiveness: List[DocumentDistinctiveness] = []
+        for idx, vocab in enumerate(vocabularies):
+            # Words shared with the rest of the corpus are those the document
+            # has in common with at least one other document.
+            others = set()
+            for other_idx, other_vocab in enumerate(vocabularies):
+                if other_idx != idx:
+                    others |= other_vocab
+            only_this = vocab - others
+            shared = vocab - only_this
+            total = len(vocab)
+            dist = round(len(only_this) / total, 4) if total else 0.0
+            distinctiveness.append(
+                DocumentDistinctiveness(
+                    index=idx,
+                    only_in_this_document=sorted(only_this),
+                    shared_vocabulary=sorted(shared),
+                    distinctiveness=dist,
+                )
+            )
+
+        return OverlapAnalysisResult(
+            document_count=len(text_list),
+            overlap_matrix=overlap_matrix,
+            most_similar_pair=(most[0] // (len(text_list) - 1), most[0] % (len(text_list) - 1) + 1, round(most[1], 4)),
+            least_similar_pair=(
+                least[0] // (len(text_list) - 1),
+                least[0] % (len(text_list) - 1) + 1,
+                round(least[1], 4),
+            ),
+            average_similarity=average,
+            distinctiveness=distinctiveness,
+        )
+
     def compare(self, corpus_a: Iterable[str], corpus_b: Iterable[str]) -> Dict[str, object]:
         """Compare stop-word profiles of two corpora.
 
@@ -212,11 +364,7 @@ class CorpusAnalyzer:
             "shared_stop_words": words_a & words_b,
             "unique_to_a": words_a - words_b,
             "unique_to_b": words_b - words_a,
-            "jaccard_similarity": (
-                len(words_a & words_b) / len(words_a | words_b)
-                if words_a | words_b
-                else 0.0
-            ),
+            "jaccard_similarity": (len(words_a & words_b) / len(words_a | words_b) if words_a | words_b else 0.0),
         }
 
     # ── Private ───────────────────────────────────────────────────────────
@@ -242,6 +390,7 @@ class CorpusAnalyzer:
 
 
 # ── CorpusStopWordsBuilder ────────────────────────────────────────────────────
+
 
 class CorpusStopWordsBuilder:
     """Derive a domain-specific stop-word list from a corpus.

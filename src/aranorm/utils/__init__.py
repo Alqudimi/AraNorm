@@ -2,7 +2,7 @@
 
 from aranorm.utils.cache import NormalizationCache
 from aranorm.utils.chunker import TextChunker, TextChunk, chunk_text
-from aranorm.utils.exporters import BatchExporter
+from aranorm.utils.exporters import BatchExporter, StreamingBatchExporter
 from aranorm.utils.helpers import contains_arabic, is_arabic_char, join_nonempty
 from aranorm.utils.language_detector import (
     DetectionResult,
@@ -61,6 +61,7 @@ __all__ = [
     "NormalizationCache",
     # Export
     "BatchExporter",
+    "StreamingBatchExporter",
     # Language detection
     "DetectionResult",
     "LanguageDetector",

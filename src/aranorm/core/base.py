@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -28,6 +28,8 @@ class ProcessorContext:
 
     applied_steps: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    _trace_enabled: bool = field(default=False, repr=False)
+    _trace: List[Tuple[str, str]] = field(default_factory=list, repr=False)
 
     def record(self, step: str) -> None:
         """Append *step* to :attr:`applied_steps` if not already present.
@@ -42,6 +44,24 @@ class ProcessorContext:
         """
         if step not in self.applied_steps:
             self.applied_steps.append(step)
+        if self._trace_enabled:
+            self._trace.append((step, "record"))
+
+    def enable_trace(self) -> None:
+        """Opt in to detailed ``(step, action)`` recording for this context.
+
+        Tracing is explicitly opt-in: when disabled (the default), the trace
+        list stays empty and no additional bookkeeping affects processing.
+        """
+        self._trace_enabled = True
+
+    def steps_trace(self) -> List[Tuple[str, str]]:
+        """Return a copy of the recorded ``(step, action)`` trace.
+
+        Returns an empty list when tracing was never enabled, keeping the
+        contract stable for callers that never opt in.
+        """
+        return [(step, action) for step, action in self._trace]
 
     def record_always(self, step: str) -> None:
         """Append *step* even if it was already recorded.
@@ -55,6 +75,8 @@ class ProcessorContext:
             A human-readable processor/stage identifier.
         """
         self.applied_steps.append(step)
+        if self._trace_enabled:
+            self._trace.append((step, "record_always"))
 
     def set(self, key: str, value: Any) -> None:
         """Store *value* in the metadata dict under *key*.
@@ -94,6 +116,8 @@ class ProcessorContext:
         for step in other.applied_steps:
             self.record(step)
         self.metadata.update(other.metadata)
+        if self._trace_enabled and other._trace_enabled:
+            self._trace.extend((step, "merge") for step, _ in other.steps_trace())
 
 
 class Processor(ABC):

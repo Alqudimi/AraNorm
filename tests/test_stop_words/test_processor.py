@@ -19,6 +19,7 @@ def processor(registry: StopWordsRegistry) -> StopWordsProcessor:
 
 # ── Remove mode ───────────────────────────────────────────────────────────────
 
+
 def test_remove_basic(processor: StopWordsProcessor) -> None:
     result = processor.process_detailed("أنا سعيد جداً")
     assert "سعيد" in result.stop_words_removed
@@ -49,6 +50,7 @@ def test_remove_no_stop_words(processor: StopWordsProcessor) -> None:
 
 # ── Extract mode ──────────────────────────────────────────────────────────────
 
+
 def test_extract_mode(registry: StopWordsRegistry) -> None:
     cfg = StopWordsConfig(mode="extract", scope="universal")
     proc = StopWordsProcessor(config=cfg, registry=registry)
@@ -59,6 +61,7 @@ def test_extract_mode(registry: StopWordsRegistry) -> None:
 
 # ── Highlight mode ────────────────────────────────────────────────────────────
 
+
 def test_highlight_mode(registry: StopWordsRegistry) -> None:
     cfg = StopWordsConfig(mode="highlight", scope="msa_only")
     proc = StopWordsProcessor(config=cfg, registry=registry)
@@ -67,6 +70,7 @@ def test_highlight_mode(registry: StopWordsRegistry) -> None:
 
 
 # ── Count mode ────────────────────────────────────────────────────────────────
+
 
 def test_count_mode_preserves_text(registry: StopWordsRegistry) -> None:
     text = "أنا سعيد من"
@@ -79,6 +83,7 @@ def test_count_mode_preserves_text(registry: StopWordsRegistry) -> None:
 
 
 # ── Dialect-aware ─────────────────────────────────────────────────────────────
+
 
 def test_dialect_aware_egy(registry: StopWordsRegistry) -> None:
     cfg = StopWordsConfig(
@@ -93,6 +98,7 @@ def test_dialect_aware_egy(registry: StopWordsRegistry) -> None:
 
 
 # ── Custom stop words ─────────────────────────────────────────────────────────
+
 
 def test_custom_stop_words(registry: StopWordsRegistry) -> None:
     cfg = StopWordsConfig(
@@ -109,6 +115,7 @@ def test_custom_stop_words(registry: StopWordsRegistry) -> None:
 
 # ── Excluded stop words ───────────────────────────────────────────────────────
 
+
 def test_excluded_stop_words(registry: StopWordsRegistry) -> None:
     cfg = StopWordsConfig(
         mode="remove",
@@ -122,6 +129,7 @@ def test_excluded_stop_words(registry: StopWordsRegistry) -> None:
 
 # ── Preserve prepositions ─────────────────────────────────────────────────────
 
+
 def test_preserve_prepositions(registry: StopWordsRegistry) -> None:
     cfg = StopWordsConfig(mode="remove", scope="universal", preserve_prepositions=True)
     proc = StopWordsProcessor(config=cfg, registry=registry)
@@ -130,6 +138,7 @@ def test_preserve_prepositions(registry: StopWordsRegistry) -> None:
 
 
 # ── Filler removal ────────────────────────────────────────────────────────────
+
 
 def test_remove_filler(registry: StopWordsRegistry) -> None:
     cfg = StopWordsConfig(mode="remove", scope="universal", remove_filler=True)
@@ -141,6 +150,7 @@ def test_remove_filler(registry: StopWordsRegistry) -> None:
 
 # ── Internet tokens ───────────────────────────────────────────────────────────
 
+
 def test_remove_internet(registry: StopWordsRegistry) -> None:
     cfg = StopWordsConfig(mode="remove", scope="universal", remove_internet=True)
     proc = StopWordsProcessor(config=cfg, registry=registry)
@@ -151,6 +161,7 @@ def test_remove_internet(registry: StopWordsRegistry) -> None:
 
 # ── Numbers ───────────────────────────────────────────────────────────────────
 
+
 def test_remove_numbers(registry: StopWordsRegistry) -> None:
     cfg = StopWordsConfig(mode="remove", scope="universal", remove_numbers=True)
     proc = StopWordsProcessor(config=cfg, registry=registry)
@@ -160,6 +171,7 @@ def test_remove_numbers(registry: StopWordsRegistry) -> None:
 
 
 # ── StopWordsResult fields ────────────────────────────────────────────────────
+
 
 def test_result_has_all_fields(processor: StopWordsProcessor) -> None:
     r = processor.process_detailed("أنا سعيد من")

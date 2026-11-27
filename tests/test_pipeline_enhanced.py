@@ -9,8 +9,8 @@ import pytest
 
 from aranorm import ArabicNormalizationPipeline, NormalizationResult, PipelineConfig
 
-
 # ── NormalizationResult serialization ─────────────────────────────────────────
+
 
 class TestNormalizationResultSerialization:
     @pytest.fixture
@@ -30,9 +30,8 @@ class TestNormalizationResultSerialization:
 
     def test_to_dict_stop_words_found_is_list(self) -> None:
         from aranorm import StopWordsConfig
-        config = PipelineConfig(
-            stop_words_config=StopWordsConfig(mode="remove", scope="universal")
-        )
+
+        config = PipelineConfig(stop_words_config=StopWordsConfig(mode="remove", scope="universal"))
         pipeline = ArabicNormalizationPipeline(config)
         result = pipeline.process("أنا سعيد")
         d = result.to_dict()
@@ -72,6 +71,7 @@ class TestNormalizationResultSerialization:
 
 # ── Pipeline factory methods ───────────────────────────────────────────────────
 
+
 class TestPipelineFactoryMethods:
     def test_from_preset_light(self) -> None:
         pipeline = ArabicNormalizationPipeline.from_preset("light")
@@ -84,10 +84,12 @@ class TestPipelineFactoryMethods:
         assert "https://" not in result.normalized_text
 
     def test_from_config_dict(self) -> None:
-        pipeline = ArabicNormalizationPipeline.from_config_dict({
-            "preset": "standard",
-            "clean_urls": True,
-        })
+        pipeline = ArabicNormalizationPipeline.from_config_dict(
+            {
+                "preset": "standard",
+                "clean_urls": True,
+            }
+        )
         result = pipeline.process("https://example.com مرحبا")
         assert "https://" not in result.normalized_text
 
@@ -102,6 +104,7 @@ class TestPipelineFactoryMethods:
 
 # ── PipelineBuilder ────────────────────────────────────────────────────────────
 
+
 class TestPipelineBuilder:
     def test_builder_with_stop_words(self) -> None:
         pipeline = (
@@ -115,11 +118,7 @@ class TestPipelineBuilder:
         assert result.stop_words_removed is not None
 
     def test_builder_with_dialect(self) -> None:
-        pipeline = (
-            ArabicNormalizationPipeline.builder()
-            .add_dialect_processor(normalize_to="msa")
-            .build()
-        )
+        pipeline = ArabicNormalizationPipeline.builder().add_dialect_processor(normalize_to="msa").build()
         result = pipeline.process("شلونك")
         assert result.msa_text is not None
 
@@ -134,6 +133,7 @@ class TestPipelineBuilder:
 
 
 # ── Async processing ──────────────────────────────────────────────────────────
+
 
 class TestAsyncProcessing:
     def test_process_async_single(self) -> None:
@@ -169,6 +169,7 @@ class TestAsyncProcessing:
 
 
 # ── Batch processing with error handler ───────────────────────────────────────
+
 
 class TestBatchWithErrorHandler:
     def test_on_error_callback_called_on_failure(self) -> None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass
-from typing import Dict, FrozenSet, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from aranorm.core.stop_words_config import StopWordsConfig
 from aranorm.core.stop_words_registry import StopWordsRegistry
@@ -25,12 +25,12 @@ class KeywordResult:
     """Result of keyword extraction for one text."""
 
     original_text: str
-    keywords: List[Tuple[str, float]]        # [(word, score), …] sorted by score
-    top_keywords: List[str]                  # just the words, ordered
+    keywords: List[Tuple[str, float]]  # [(word, score), …] sorted by score
+    top_keywords: List[str]  # just the words, ordered
     keyword_count: int
     content_word_count: int
     stop_word_count: int
-    coverage_ratio: float                    # keywords / total words
+    coverage_ratio: float  # keywords / total words
 
 
 class KeywordExtractor:
@@ -72,17 +72,13 @@ class KeywordExtractor:
         min_word_length: int = 3,
         reference_corpus: Optional[List[str]] = None,
     ) -> None:
-        self.config = config or StopWordsConfig(
-            mode="remove", scope="universal", remove_filler=True
-        )
+        self.config = config or StopWordsConfig(mode="remove", scope="universal", remove_filler=True)
         self.registry = registry or StopWordsRegistry()
         self.processor = StopWordsProcessor(config=self.config, registry=self.registry)
         self.top_n = top_n
         self.min_freq = min_freq
         self.min_word_length = min_word_length
-        self._idf: Optional[Dict[str, float]] = (
-            self._build_idf(reference_corpus) if reference_corpus else None
-        )
+        self._idf: Optional[Dict[str, float]] = self._build_idf(reference_corpus) if reference_corpus else None
 
     # ── Public ────────────────────────────────────────────────────────────
 
@@ -90,9 +86,13 @@ class KeywordExtractor:
         """Extract keywords from a single *text*."""
         if not text or not text.strip():
             return KeywordResult(
-                original_text=text, keywords=[], top_keywords=[],
-                keyword_count=0, content_word_count=0,
-                stop_word_count=0, coverage_ratio=0.0,
+                original_text=text,
+                keywords=[],
+                top_keywords=[],
+                keyword_count=0,
+                content_word_count=0,
+                stop_word_count=0,
+                coverage_ratio=0.0,
             )
 
         tokens = text.split()
@@ -104,12 +104,7 @@ class KeywordExtractor:
         tf: Dict[str, int] = {}
         for token in tokens:
             w = _normalise(token)
-            if (
-                w
-                and w not in stop_set
-                and _ARABIC_WORD.match(w)
-                and len(w) >= self.min_word_length
-            ):
+            if w and w not in stop_set and _ARABIC_WORD.match(w) and len(w) >= self.min_word_length:
                 tf[w] = tf.get(w, 0) + 1
 
         # Score
@@ -148,9 +143,7 @@ class KeywordExtractor:
         """Extract keywords from multiple texts."""
         return [self.extract(t) for t in texts]
 
-    def extract_common_keywords(
-        self, texts: List[str], min_text_occurrences: int = 2
-    ) -> List[Tuple[str, int]]:
+    def extract_common_keywords(self, texts: List[str], min_text_occurrences: int = 2) -> List[Tuple[str, int]]:
         """Return keywords that appear in at least *min_text_occurrences* texts."""
         from collections import Counter
 
@@ -159,10 +152,7 @@ class KeywordExtractor:
             for w in result.top_keywords:
                 word_text_count[w] += 1
 
-        return [
-            (w, c) for w, c in word_text_count.most_common()
-            if c >= min_text_occurrences
-        ]
+        return [(w, c) for w, c in word_text_count.most_common() if c >= min_text_occurrences]
 
     # ── Private ───────────────────────────────────────────────────────────
 
@@ -174,7 +164,4 @@ class KeywordExtractor:
             words = {_normalise(t) for t in text.split() if _normalise(t)}
             for w in words:
                 df[w] = df.get(w, 0) + 1
-        return {
-            w: math.log((n_docs + 1) / (count + 1)) + 1
-            for w, count in df.items()
-        }
+        return {w: math.log((n_docs + 1) / (count + 1)) + 1 for w, count in df.items()}

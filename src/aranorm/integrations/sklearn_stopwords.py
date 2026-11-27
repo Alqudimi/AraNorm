@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import FrozenSet, Optional, Set
+from typing import FrozenSet, Optional
 
 from aranorm.core.stop_words_registry import StopWordsRegistry
 

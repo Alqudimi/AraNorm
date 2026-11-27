@@ -59,9 +59,7 @@ class TransformersSeq2SeqModel:
         try:
             from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
         except ImportError as error:
-            raise IntegrationUnavailableError(
-                "Transformers is not installed; use 'pip install aranorm[ml]'"
-            ) from error
+            raise IntegrationUnavailableError("Transformers is not installed; use 'pip install aranorm[ml]'") from error
         try:
             if self._tokenizer is None:
                 self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -70,9 +68,7 @@ class TransformersSeq2SeqModel:
                 if self.device:
                     self._model.to(self.device)
         except Exception as error:
-            raise NormalizationError(
-                f"failed to load model '{self.model_name}'"
-            ) from error
+            raise NormalizationError(f"failed to load model '{self.model_name}'") from error
 
     # ── Public API ────────────────────────────────────────────────────────
 
@@ -121,17 +117,10 @@ class TransformersSeq2SeqModel:
             )
             if self.device:
                 encoded = {k: v.to(self.device) for k, v in encoded.items()}
-            generated = self._model.generate(
-                **encoded, max_new_tokens=self.max_new_tokens
-            )
-            return [
-                self._tokenizer.decode(ids, skip_special_tokens=True)
-                for ids in generated
-            ]
+            generated = self._model.generate(**encoded, max_new_tokens=self.max_new_tokens)
+            return [self._tokenizer.decode(ids, skip_special_tokens=True) for ids in generated]
         except Exception as error:
-            raise NormalizationError(
-                f"failed to generate output with model '{self.model_name}'"
-            ) from error
+            raise NormalizationError(f"failed to generate output with model '{self.model_name}'") from error
 
     def is_loaded(self) -> bool:
         """Return *True* when the model and tokenizer are already loaded."""

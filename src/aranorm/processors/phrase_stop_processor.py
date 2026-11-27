@@ -8,8 +8,7 @@ uses a sliding-window search over the token stream.
 from __future__ import annotations
 
 import os
-from functools import lru_cache
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from aranorm.core.base import Processor, ProcessorContext
 
@@ -26,7 +25,7 @@ def _read_phrases(path: str) -> List[Tuple[str, ...]]:
             line = line.strip()
             if line and not line.startswith("#"):
                 tokens = tuple(line.split())
-                if len(tokens) >= 2:          # single-token entries belong in other lists
+                if len(tokens) >= 2:  # single-token entries belong in other lists
                     phrases.append(tokens)
     return phrases
 
@@ -56,6 +55,7 @@ class PhraseStopProcessor(Processor):
     """
 
     name = "phrase_stop_processor"
+    _VALID_MODES = frozenset({"remove", "highlight", "tag"})
 
     def __init__(
         self,
@@ -64,11 +64,12 @@ class PhraseStopProcessor(Processor):
         mode: str = "remove",
         registry: Optional[List[Tuple[str, ...]]] = None,
     ) -> None:
+        if mode not in self._VALID_MODES:
+            raise ValueError("mode must be one of: remove, highlight, tag")
         self.mode = mode
         self.replace_with = replace_with
-        self._phrases: List[Tuple[str, ...]] = (
-            registry if registry is not None
-            else _read_phrases(os.path.join(_DATA_DIR, "phrases.txt"))
+        self._phrases: List[Tuple[str, ...]] = list(
+            registry if registry is not None else _read_phrases(os.path.join(_DATA_DIR, "phrases.txt"))
         )
         if extra_phrases:
             for p in extra_phrases:
@@ -106,9 +107,7 @@ class PhraseStopProcessor(Processor):
                         if self.mode == "highlight":
                             result.append("{{" + " ".join(tokens[i : i + n]) + "}}")
                         elif self.mode == "tag":
-                            result.append(
-                                "<phrase>" + " ".join(tokens[i : i + n]) + "</phrase>"
-                            )
+                            result.append("<phrase>" + " ".join(tokens[i : i + n]) + "</phrase>")
                         elif self.replace_with:
                             result.append(self.replace_with)
                         # else remove → append nothing

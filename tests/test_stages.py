@@ -15,10 +15,10 @@ from aranorm.stages import (
 )
 from tests.fixtures.sample_texts import DIALECT_MARKERS
 
-
 # ────────────────────────────────────────────────────────────────────────────
 # DialectIdentifier
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_dialect_identifier_fallback_returns_structured_result():
     result = DialectIdentifier().identify("شلونك شخبارك اليوم")
@@ -28,25 +28,24 @@ def test_dialect_identifier_fallback_returns_structured_result():
 
 
 def test_dialect_identifier_returns_msa_for_formal_text():
-    result = DialectIdentifier().identify(
-        "أعلن الرئيس عن خطة لتطوير القطاع الاقتصادي وبالتالي"
-    )
+    result = DialectIdentifier().identify("أعلن الرئيس عن خطة لتطوير القطاع الاقتصادي وبالتالي")
     assert result.dialect_label == "MSA"
     assert result.is_msa is True
 
 
-@pytest.mark.parametrize("dialect,samples", [
-    ("EGY", DIALECT_MARKERS["EGY"]),
-    ("GLF", DIALECT_MARKERS["GLF"]),
-    ("LEV", DIALECT_MARKERS["LEV"]),
-])
+@pytest.mark.parametrize(
+    "dialect,samples",
+    [
+        ("EGY", DIALECT_MARKERS["EGY"]),
+        ("GLF", DIALECT_MARKERS["GLF"]),
+        ("LEV", DIALECT_MARKERS["LEV"]),
+    ],
+)
 def test_dialect_identifier_recognizes_major_dialects(dialect, samples):
     identifier = DialectIdentifier()
     for sample in samples:
         result = identifier.identify(sample)
-        assert result.dialect_label == dialect, (
-            f"Expected {dialect}, got {result.dialect_label} for: {sample!r}"
-        )
+        assert result.dialect_label == dialect, f"Expected {dialect}, got {result.dialect_label} for: {sample!r}"
 
 
 def test_dialect_identifier_unknown_text_returns_unk_or_msa():
@@ -61,6 +60,7 @@ def test_dialect_identifier_empty_string_returns_unk():
 
 def test_dialect_identifier_camel_raises_without_package():
     from aranorm.exceptions import IntegrationUnavailableError
+
     identifier = DialectIdentifier(use_camel_tools=True)
     with pytest.raises(IntegrationUnavailableError):
         identifier.identify("نص عربي")
@@ -82,6 +82,7 @@ def test_dialect_identifier_supported_dialects_filter():
 # ────────────────────────────────────────────────────────────────────────────
 # DialectNormalizer
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_dialect_normalizer_coda_fixes_common_errors():
     normalizer = DialectNormalizer("coda")
@@ -146,8 +147,10 @@ def test_rule_based_msa_strategy_direct():
 # OrthographicNormalizer
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_orthographic_normalizer_default_config():
     from aranorm.core.config import PipelineConfig
+
     normalizer = OrthographicNormalizer(PipelineConfig())
     result = normalizer.process("أحمَدُ إبراهيمـ آمنَ ٱللهُ")
     assert "أ" not in result
@@ -157,6 +160,7 @@ def test_orthographic_normalizer_default_config():
 
 def test_orthographic_normalizer_records_steps():
     from aranorm.core.config import PipelineConfig
+
     context = ProcessorContext()
     OrthographicNormalizer(PipelineConfig()).process("أ", context)
     assert len(context.applied_steps) > 0
@@ -166,8 +170,10 @@ def test_orthographic_normalizer_records_steps():
 # ContentCleaner
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_content_cleaner_removes_configured_content():
     from aranorm.core.config import PipelineConfig
+
     config = PipelineConfig(clean_urls=True, clean_html=True, clean_emails=True)
     cleaner = ContentCleaner(config)
     text = "<p>زوروا</p> https://example.com راسلنا a@b.com"
@@ -180,6 +186,7 @@ def test_content_cleaner_removes_configured_content():
 # ────────────────────────────────────────────────────────────────────────────
 # MorphologicalProcessor
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_morphological_processor_accepts_injected_callable():
     processor = MorphologicalProcessor(lambda text: [{"token": text}])
@@ -197,6 +204,7 @@ def test_morphological_processor_accepts_injected_object():
 
 def test_morphological_processor_raises_without_analyzer():
     from aranorm.exceptions import IntegrationUnavailableError
+
     processor = MorphologicalProcessor()
     with pytest.raises(IntegrationUnavailableError):
         processor.analyze("نص")
@@ -206,9 +214,11 @@ def test_morphological_processor_raises_without_analyzer():
 # ProcessorContext
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_processor_context_records_steps():
     context = ProcessorContext()
     from aranorm.processors import ALEFProcessor
+
     ALEFProcessor().process("أ", context)
     ALEFProcessor().process("أ", context)
     assert context.applied_steps == ["normalize_alef"]
@@ -216,6 +226,7 @@ def test_processor_context_records_steps():
 
 def test_processor_context_records_multiple_different_steps():
     from aranorm.processors import ALEFProcessor, DiacriticsProcessor
+
     context = ProcessorContext()
     ALEFProcessor().process("أحمد", context)
     DiacriticsProcessor().process("مَرْحَبًا", context)

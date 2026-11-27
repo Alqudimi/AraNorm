@@ -33,19 +33,17 @@ from tests.fixtures.sample_texts import (
     DIACRITICS_CASES,
     DIGIT_CASES,
     EMAIL_CASES,
-    EMOJI_CASES,
     HTML_CASES,
     LIGATURE_CASES,
     MENTION_CASES,
-    REPEATED_CHARS_CASES,
     TAA_MARBUTA_CASES,
     TATWEEL_CASES,
 )
 
-
 # ────────────────────────────────────────────────────────────────────────────
 # Alef processor
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_alef_processor_normalizes_all_variants():
     assert ALEFProcessor().process("أحمد إبراهيم آمن ٱلله") == "احمد ابراهيم امن الله"
@@ -59,6 +57,7 @@ def test_alef_processor_parametrized(source, expected):
 # ────────────────────────────────────────────────────────────────────────────
 # Hamza processor
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_hamza_processor_preserves_standalone_hamza():
     assert HamzaProcessor().process("سؤال شيئ") == "سءال شيء"
@@ -75,6 +74,7 @@ def test_hamza_processor_ya_hamza():
 # ────────────────────────────────────────────────────────────────────────────
 # Parametrized basic processors
 # ────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.parametrize(
     ("processor", "source", "expected"),
@@ -101,6 +101,7 @@ def test_basic_processors(processor, source, expected):
 # ────────────────────────────────────────────────────────────────────────────
 # Fixtures-backed parametrized tests
 # ────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.parametrize("source,expected", DIACRITICS_CASES)
 def test_diacritics_processor(source, expected):
@@ -131,6 +132,7 @@ def test_taa_marbuta_processor(source, expected):
 # Content cleaning
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_content_cleaning_chain():
     text = "<b>زوروا</b> https://example.com a@b.com @user #موضوع"
     text = HTMLProcessor().process(text)
@@ -145,11 +147,14 @@ def test_content_cleaning_chain():
     assert "a@b.com" not in text
 
 
-@pytest.mark.parametrize("source,after_url", URL_CASES := [
-    ("زوروا https://example.com للمزيد", True),
-    ("http://foo.org/path?q=1 مقال", True),
-    ("www.google.com أداة", True),
-])
+@pytest.mark.parametrize(
+    "source,after_url",
+    URL_CASES := [
+        ("زوروا https://example.com للمزيد", True),
+        ("http://foo.org/path?q=1 مقال", True),
+        ("www.google.com أداة", True),
+    ],
+)
 def test_url_processor_removes_links(source, after_url):
     result = URLProcessor().process(source)
     assert "http" not in result and "www." not in result
@@ -177,6 +182,7 @@ def test_html_processor_removes_tags(source, _expected):
 # Spacing and punctuation
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_repeated_punctuation_processor():
     assert RepeatedPunctuationProcessor().process("مرحبا؟؟؟!!!") == "مرحبا؟!"
 
@@ -188,6 +194,7 @@ def test_spacing_processor():
 # ────────────────────────────────────────────────────────────────────────────
 # Non-Arabic and English
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_non_arabic_processor_can_keep_digits():
     result = NonArabicProcessor().process("مرحبا hello 123")
@@ -207,6 +214,7 @@ def test_english_processor_removes_latin():
 # Arabizi
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def test_arabizi_processor_converts_common_tokens():
     assert ArabiziProcessor().process("7abibi 3amel eh") == "حابيبي عاميل ه"
 
@@ -219,6 +227,7 @@ def test_arabizi_digit_substitutions():
 # ────────────────────────────────────────────────────────────────────────────
 # Platform processors
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def test_twitter_normalizer_removes_rt_prefix():
     text = "RT @someuser: نص مهم جداً"
@@ -272,13 +281,17 @@ def test_chat_normalizer_expands_abbreviations():
 # Error handling
 # ────────────────────────────────────────────────────────────────────────────
 
-@pytest.mark.parametrize("processor", [
-    ALEFProcessor(),
-    HamzaProcessor(),
-    DiacriticsProcessor(),
-    TatweelProcessor(),
-    URLProcessor(),
-])
+
+@pytest.mark.parametrize(
+    "processor",
+    [
+        ALEFProcessor(),
+        HamzaProcessor(),
+        DiacriticsProcessor(),
+        TatweelProcessor(),
+        URLProcessor(),
+    ],
+)
 def test_processors_reject_non_string_input(processor):
     with pytest.raises(InvalidTextError):
         processor.process(None)

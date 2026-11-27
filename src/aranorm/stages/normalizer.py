@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from aranorm.core.base import ProcessorContext
+from aranorm.core.base import Processor, ProcessorContext
 from aranorm.core.config import PipelineConfig
 from aranorm.processors import (
     ALEFProcessor,
@@ -30,9 +30,9 @@ class OrthographicNormalizer:
         self.config = config
         self.processors = self._build_processors()
 
-    def _build_processors(self) -> list:
+    def _build_processors(self) -> list[Processor]:
         """Build enabled orthographic processors."""
-        processors = []
+        processors: list[Processor] = []
         if self.config.handle_arabizi:
             processors.append(ArabiziProcessor())
         if self.config.normalize_unicode:

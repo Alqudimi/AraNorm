@@ -26,11 +26,10 @@ Example
 
 from __future__ import annotations
 
-import math
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 # ── Patterns ──────────────────────────────────────────────────────────────────
 
@@ -40,22 +39,60 @@ _SENTENCE_SPLIT = re.compile(r"[.!?؟؛…\n]+")
 _TATWEEL = re.compile(r"\u0640+")
 
 # Complexity indicator words (subordinating conjunctions, relative pronouns)
-_COMPLEXITY_MARKERS = frozenset({
-    "الذي", "التي", "الذين", "اللواتي", "اللتان", "اللذان",
-    "حيث", "عندما", "بينما", "لأن", "لأنه", "لكي", "حتى",
-    "إذا", "إذ", "إذن", "لو", "لولا", "أن", "أنه", "أنها",
-    "مما", "مما", "كلما", "طالما", "بما", "فيما",
-})
+_COMPLEXITY_MARKERS = frozenset(
+    {
+        "الذي",
+        "التي",
+        "الذين",
+        "اللواتي",
+        "اللتان",
+        "اللذان",
+        "حيث",
+        "عندما",
+        "بينما",
+        "لأن",
+        "لأنه",
+        "لكي",
+        "حتى",
+        "إذا",
+        "إذ",
+        "إذن",
+        "لو",
+        "لولا",
+        "أن",
+        "أنه",
+        "أنها",
+        "مما",
+        "مما",
+        "كلما",
+        "طالما",
+        "بما",
+        "فيما",
+    }
+)
 
 # Connectors / discourse markers (medium complexity)
-_CONNECTORS = frozenset({
-    "لذلك", "بالتالي", "وبالتالي", "وإن", "ومع ذلك", "بالإضافة",
-    "علاوة على ذلك", "من جهة", "من جهة أخرى", "في حين", "في ضوء",
-    "استناداً", "تبعاً",
-})
+_CONNECTORS = frozenset(
+    {
+        "لذلك",
+        "بالتالي",
+        "وبالتالي",
+        "وإن",
+        "ومع ذلك",
+        "بالإضافة",
+        "علاوة على ذلك",
+        "من جهة",
+        "من جهة أخرى",
+        "في حين",
+        "في ضوء",
+        "استناداً",
+        "تبعاً",
+    }
+)
 
 
 # ── Result dataclass ──────────────────────────────────────────────────────────
+
 
 @dataclass
 class ReadabilityResult:
@@ -84,6 +121,8 @@ class ReadabilityResult:
         Variance of sentence lengths.
     avg_word_length:
         Mean Arabic characters per word.
+    long_word_ratio:
+        Fraction of words longer than the configured easy-word threshold.
     type_token_ratio:
         ``unique_words / word_count`` — vocabulary diversity.
     hapax_ratio:
@@ -112,6 +151,7 @@ class ReadabilityResult:
 
     # Word metrics
     avg_word_length: float
+    long_word_ratio: float
     type_token_ratio: float
     hapax_ratio: float
     diacritic_ratio: float
@@ -135,6 +175,7 @@ class ReadabilityResult:
             "max_sentence_length": self.max_sentence_length,
             "sentence_length_variance": self.sentence_length_variance,
             "avg_word_length": self.avg_word_length,
+            "long_word_ratio": self.long_word_ratio,
             "type_token_ratio": self.type_token_ratio,
             "hapax_ratio": self.hapax_ratio,
             "diacritic_ratio": self.diacritic_ratio,
@@ -145,6 +186,7 @@ class ReadabilityResult:
 
 
 # ── Analyzer ──────────────────────────────────────────────────────────────────
+
 
 class ArabicReadabilityAnalyzer:
     """Compute multi-metric readability scores for Arabic text.
@@ -215,22 +257,18 @@ class ArabicReadabilityAnalyzer:
         if word_count == 0:
             return self._empty(text)
 
-        sent_lengths = [
-            len(_ARABIC_WORD.findall(s)) for s in sentences
-        ]
+        sent_lengths = [len(_ARABIC_WORD.findall(s)) for s in sentences]
         avg_sent_len = sum(sent_lengths) / sentence_count
         max_sent_len = max(sent_lengths) if sent_lengths else 0
 
         # Variance of sentence lengths
         mean = avg_sent_len
-        variance = (
-            sum((l - mean) ** 2 for l in sent_lengths) / sentence_count
-            if sentence_count > 1 else 0.0
-        )
+        variance = sum((length - mean) ** 2 for length in sent_lengths) / sentence_count if sentence_count > 1 else 0.0
 
         # Word metrics
         word_lengths = [len(w) for w in all_words]
         avg_word_len = sum(word_lengths) / word_count
+        long_word_ratio = sum(1 for length in word_lengths if length > self.max_easy_word) / word_count
 
         freq: Counter = Counter(all_words)
         unique = len(freq)
@@ -238,17 +276,13 @@ class ArabicReadabilityAnalyzer:
         hapax = sum(1 for c in freq.values() if c == 1) / unique if unique else 0.0
 
         # Diacritic ratio
-        total_arabic_chars = sum(
-            1 for c in text if "\u0621" <= c <= "\u064A" or "\u0671" <= c <= "\u06D3"
-        )
+        total_arabic_chars = sum(1 for c in text if "\u0621" <= c <= "\u064a" or "\u0671" <= c <= "\u06d3")
         diacritic_chars = len(_DIACRITICS.findall(text))
         diacritic_ratio = diacritic_chars / total_arabic_chars if total_arabic_chars else 0.0
 
         # Complexity markers
         lower_words = set(w for w in all_words)
-        complexity_count = sum(
-            1 for m in _COMPLEXITY_MARKERS if m in lower_words
-        )
+        complexity_count = sum(1 for m in _COMPLEXITY_MARKERS if m in lower_words)
         connector_count = sum(1 for c in _CONNECTORS if c in text)
 
         # Component scores (0–100, higher = easier)
@@ -279,6 +313,7 @@ class ArabicReadabilityAnalyzer:
             max_sentence_length=max_sent_len,
             sentence_length_variance=round(variance, 2),
             avg_word_length=round(avg_word_len, 2),
+            long_word_ratio=round(long_word_ratio, 4),
             type_token_ratio=round(ttr, 4),
             hapax_ratio=round(hapax, 4),
             diacritic_ratio=round(diacritic_ratio, 4),
@@ -303,9 +338,77 @@ class ArabicReadabilityAnalyzer:
         """
         return [self.analyze(t) for t in texts]
 
-    def compare(
-        self, texts: List[str], sort_by: str = "score"
-    ) -> List[Tuple[str, ReadabilityResult]]:
+    def corpus_summary(
+        self,
+        texts: List[str],
+    ) -> Dict[str, Any]:
+        """Compute corpus-level readability statistics across *texts*.
+
+        Aggregates the per-text :class:`ReadabilityResult` scores into a
+        single summary dictionary containing the mean and standard
+        deviation of the composite score, the distribution of labels,
+        and the easiest/hardest texts by index.
+
+        Parameters
+        ----------
+        texts:
+            List of Arabic strings to summarise.
+
+        Returns
+        -------
+        dict
+            Keys: ``text_count``, ``mean_score``, ``score_std``,
+            ``label_distribution`` (mapping label → count),
+            ``easiest_index``, ``hardest_index``,
+            ``mean_sentence_length``, ``mean_type_token_ratio``.
+
+        Example
+        -------
+        >>> analyzer = ArabicReadabilityAnalyzer()
+        >>> summary = analyzer.corpus_summary(["الكتاب جيد.", "مدرسة"])
+        >>> summary["text_count"]
+        2
+        """
+        if not texts:
+            return {
+                "text_count": 0,
+                "mean_score": 0.0,
+                "score_std": 0.0,
+                "label_distribution": {},
+                "easiest_index": None,
+                "hardest_index": None,
+                "mean_sentence_length": 0.0,
+                "mean_type_token_ratio": 0.0,
+            }
+
+        results = self.analyze_batch(texts)
+        scores = [r.score for r in results]
+        mean = sum(scores) / len(scores)
+        variance = sum((score - mean) ** 2 for score in scores) / len(scores) if len(scores) > 1 else 0.0
+        std = variance**0.5
+
+        distribution: Dict[str, int] = {}
+        for result in results:
+            distribution[result.readability_label] = distribution.get(result.readability_label, 0) + 1
+
+        max_idx = max(range(len(scores)), key=lambda i: scores[i])
+        min_idx = min(range(len(scores)), key=lambda i: scores[i])
+
+        avg_sentence = sum(r.avg_sentence_length for r in results) / len(results)
+        avg_ttr = sum(r.type_token_ratio for r in results) / len(results)
+
+        return {
+            "text_count": len(results),
+            "mean_score": round(mean, 2),
+            "score_std": round(std, 2),
+            "label_distribution": distribution,
+            "easiest_index": max_idx,
+            "hardest_index": min_idx,
+            "mean_sentence_length": round(avg_sentence, 2),
+            "mean_type_token_ratio": round(avg_ttr, 4),
+        }
+
+    def compare(self, texts: List[str], sort_by: str = "score") -> List[Tuple[str, ReadabilityResult]]:
         """Rank *texts* by readability.
 
         Parameters
@@ -350,6 +453,7 @@ class ArabicReadabilityAnalyzer:
             max_sentence_length=0,
             sentence_length_variance=0.0,
             avg_word_length=0.0,
+            long_word_ratio=0.0,
             type_token_ratio=0.0,
             hapax_ratio=0.0,
             diacritic_ratio=0.0,

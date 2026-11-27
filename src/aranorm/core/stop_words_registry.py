@@ -31,6 +31,7 @@ _DIALECT_FILE_MAP: Dict[str, str] = {
 
 # ── Pure-Python Trie ──────────────────────────────────────────────────────────
 
+
 class _TrieNode:
     __slots__ = ("children", "is_end")
 
@@ -76,6 +77,7 @@ class _Trie:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _read_txt(path: str) -> Set[str]:
     """Read a line-per-word text file; ignore blank lines and comments."""
     if not os.path.isfile(path):
@@ -85,6 +87,7 @@ def _read_txt(path: str) -> Set[str]:
 
 
 # ── Registry ─────────────────────────────────────────────────────────────────
+
 
 class StopWordsRegistry:
     """Central stop-words registry with Trie-backed lookup.
@@ -244,7 +247,7 @@ class StopWordsRegistry:
             return self._load_msa().words()
         if scope in ("dialect", "dialect_aware"):
             result: Set[str] = self._load_msa().words()
-            for code in (dialects or frozenset()):
+            for code in dialects or frozenset():
                 result |= self._load_dialect(code).words()
             return result
         if scope == "filler":
@@ -295,7 +298,4 @@ class StopWordsRegistry:
 
     def get_all_dialects(self) -> Dict[str, Set[str]]:
         """Return per-dialect stop-word sets."""
-        return {
-            code: self._load_dialect(code).words()
-            for code in _DIALECT_FILE_MAP
-        }
+        return {code: self._load_dialect(code).words() for code in _DIALECT_FILE_MAP}

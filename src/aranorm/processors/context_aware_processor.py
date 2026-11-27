@@ -6,7 +6,6 @@ token context before deciding whether to remove or keep them.
 
 from __future__ import annotations
 
-import re
 from typing import Optional, Set
 
 from aranorm.core.base import Processor, ProcessorContext
@@ -18,8 +17,14 @@ _NEGATION_PARTICLES: Set[str] = {"لا", "لم", "لن", "لست", "ليس", "ل
 
 # Idiomatic phrases where "لا" is NOT a negation and should be removed
 _IDIOMATIC_LA: Set[str] = {
-    "لا شك", "لا بد", "لا ريب", "لا سيما", "لا محالة",
-    "لا سبيل", "لا غرو", "لا جرم",
+    "لا شك",
+    "لا بد",
+    "لا ريب",
+    "لا سيما",
+    "لا محالة",
+    "لا سبيل",
+    "لا غرو",
+    "لا جرم",
 }
 
 # ── Emphasis / conditional particles ─────────────────────────────────────────
@@ -28,8 +33,16 @@ _EMPHASIS_PARTICLES: Set[str] = {"إن", "أن", "إنه", "إنها", "إنهم
 # Words that typically follow emphasis "إن" (NOT a conditional if-clause)
 # We keep إن when followed by a noun/pronoun (emphatic use)
 _CONDITIONAL_INDICATORS: Set[str] = {
-    "تحسنوا", "تفعل", "تأتِ", "تجتهد", "تنجح",
-    "شاء", "أراد", "أردت", "كنت", "جاء",
+    "تحسنوا",
+    "تفعل",
+    "تأتِ",
+    "تجتهد",
+    "تنجح",
+    "شاء",
+    "أراد",
+    "أردت",
+    "كنت",
+    "جاء",
 }
 
 

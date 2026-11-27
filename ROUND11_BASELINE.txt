@@ -1,0 +1,41 @@
+Round 11 baseline
+Sun Aug 16 21:50:37 UTC 2026
+Python 3.12.3
+989b84d989b0ccf616b2b54437fd402066a208f5
+?? ROUND11_BASELINE.txt
+
+Collected tests:
+tests/test_utils.py::TestTextChunker::test_overlap_tokens
+tests/test_utils.py::TestTextChunker::test_chunk_iter_yields_same_as_chunk
+tests/test_utils.py::TestTextChunker::test_empty_text_returns_empty_list
+tests/test_utils.py::TestTextChunker::test_invalid_max_tokens_raises
+tests/test_utils.py::TestTextChunker::test_invalid_overlap_raises
+tests/test_utils.py::TestTextChunker::test_chunk_text_convenience
+
+854 tests collected in 1.05s
+
+Make targets:
+.PHONY: help install dev-install test test-fast test-cov server-contracts streaming-contracts plugin-contracts installed-smoke lint format format-check type-check verify benchmark benchmark-quick clean all
+help:          ## Show this help message
+install:       ## Install the package (editable)
+dev-install:   ## Install package + dev/quality extras
+test:          ## Run all tests
+test-fast:     ## Run tests without verbose output
+test-cov:      ## Run tests with coverage report
+server-contracts: ## Run runtime, HTTP, and serve CLI contract tests
+streaming-contracts: ## Run resumable streaming, CLI, and HTTP contract tests
+plugin-contracts: ## Run installed-style processor entry-point contracts
+installed-smoke: ## Build and validate wheel and sdist outside the source tree
+lint:          ## Run flake8 linter
+format:        ## Auto-format with black
+format-check:  ## Check formatting without changing files
+type-check:    ## Run mypy type checker
+benchmark:     ## Run the full pipeline benchmark
+benchmark-quick: ## Quick benchmark (100 texts only)
+clean:         ## Remove build artefacts and caches
+verify: format-check lint type-check test  ## Run the complete non-mutating quality gate
+all: verify  ## Run the complete quality gate
+
+Source/test counts:
+90
+66

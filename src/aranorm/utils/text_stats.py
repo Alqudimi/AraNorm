@@ -137,10 +137,7 @@ def compute_stats(text: str, top_n: int = 10) -> TextStats:
     avg_sentence_length = round(word_count / sentence_count, 2) if sentence_count else 0.0
 
     # Vocabulary
-    cleaned_tokens = [
-        _DIACRITIC_RE.sub("", t).strip(".,،؟!؛:()[]{}\"'«»")
-        for t in raw_tokens
-    ]
+    cleaned_tokens = [_DIACRITIC_RE.sub("", t).strip(".,،؟!؛:()[]{}\"'«»") for t in raw_tokens]
     freq: Dict[str, int] = {}
     for w in cleaned_tokens:
         if w:
@@ -155,9 +152,9 @@ def compute_stats(text: str, top_n: int = 10) -> TextStats:
     # Readability: simple heuristic based on avg sentence/word length
     # Short words, short sentences → easy; long words, long sentences → hard
     score = 100.0
-    score -= max(0, avg_word_length - 4) * 8   # penalize long words
+    score -= max(0, avg_word_length - 4) * 8  # penalize long words
     score -= max(0, avg_sentence_length - 8) * 3  # penalize long sentences
-    score -= max(0, diacritic_ratio * 10)        # diacritized text is often formal
+    score -= max(0, diacritic_ratio * 10)  # diacritized text is often formal
     score = max(0.0, min(100.0, round(score, 1)))
 
     label = _readability_label(score)
@@ -205,6 +202,7 @@ def compare_stats(text_a: str, text_b: str) -> Dict[str, object]:
 
 # ── Private helpers ────────────────────────────────────────────────────────────
 
+
 def _readability_label(score: float) -> str:
     if score >= 80:
         return "very_easy"
@@ -230,11 +228,23 @@ def _stats_summary(s: TextStats) -> Dict[str, object]:
 
 def _empty_stats() -> TextStats:
     return TextStats(
-        char_count=0, char_count_no_spaces=0, arabic_char_count=0,
-        latin_char_count=0, digit_count=0, diacritic_count=0,
-        word_count=0, arabic_word_count=0, sentence_count=0,
-        avg_word_length=0.0, avg_sentence_length=0.0, vocabulary_size=0,
-        type_token_ratio=0.0, diacritic_ratio=0.0, arabic_ratio=0.0,
-        readability_score=0.0, readability_label="very_difficult",
-        word_frequency={}, top_words=[],
+        char_count=0,
+        char_count_no_spaces=0,
+        arabic_char_count=0,
+        latin_char_count=0,
+        digit_count=0,
+        diacritic_count=0,
+        word_count=0,
+        arabic_word_count=0,
+        sentence_count=0,
+        avg_word_length=0.0,
+        avg_sentence_length=0.0,
+        vocabulary_size=0,
+        type_token_ratio=0.0,
+        diacritic_ratio=0.0,
+        arabic_ratio=0.0,
+        readability_score=0.0,
+        readability_label="very_difficult",
+        word_frequency={},
+        top_words=[],
     )

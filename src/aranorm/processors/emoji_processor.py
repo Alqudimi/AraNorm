@@ -16,8 +16,4 @@ class EmojiProcessor(TextProcessor):
     def _is_emoji(char: str) -> bool:
         """Return whether a character lies in common emoji ranges."""
         codepoint = ord(char)
-        return (
-            0x1F000 <= codepoint <= 0x1FAFF
-            or 0x2600 <= codepoint <= 0x27BF
-            or 0xFE0F == codepoint
-        )
+        return 0x1F000 <= codepoint <= 0x1FAFF or 0x2600 <= codepoint <= 0x27BF or 0xFE0F == codepoint

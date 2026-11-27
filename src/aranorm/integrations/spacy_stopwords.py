@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Set
+from typing import Any, Optional, Set
 
 from aranorm.core.stop_words_registry import StopWordsRegistry
 from aranorm.exceptions import IntegrationUnavailableError
@@ -30,7 +30,7 @@ class SpacyStopWordsAdapter:
         """Return stop words as a set compatible with spaCy."""
         return self.registry.get_words(scope)
 
-    def enrich_spacy(self, nlp: object, scope: str = "universal") -> object:
+    def enrich_spacy(self, nlp: Any, scope: str = "universal") -> Any:
         """Add AraNorm stop words to a spaCy *nlp* model's default stop words.
 
         Parameters
@@ -52,20 +52,16 @@ class SpacyStopWordsAdapter:
         try:
             import spacy  # noqa: F401
         except ImportError as exc:
-            raise IntegrationUnavailableError(
-                "spaCy is not installed. Run: pip install spacy"
-            ) from exc
+            raise IntegrationUnavailableError("spaCy is not installed. Run: pip install spacy") from exc
 
         words = self.to_spacy_set(scope)
         try:
-            lang = nlp.Defaults  # type: ignore[union-attr]
+            lang = nlp.Defaults
             lang.stop_words |= words
             for word in words:
-                if hasattr(nlp, "vocab") and word in nlp.vocab:  # type: ignore[operator]
-                    nlp.vocab[word].is_stop = True  # type: ignore[index]
+                if hasattr(nlp, "vocab") and word in nlp.vocab:
+                    nlp.vocab[word].is_stop = True
         except AttributeError as exc:
-            raise IntegrationUnavailableError(
-                "Provided object does not appear to be a spaCy Language model."
-            ) from exc
+            raise IntegrationUnavailableError("Provided object does not appear to be a spaCy Language model.") from exc
 
         return nlp

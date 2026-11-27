@@ -1,0 +1,72 @@
+name: Quality
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package and quality dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[quality]"
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Run resumable streaming contracts
+        run: python -m pytest tests/test_streaming_session_round10.py tests/test_cli_round10.py tests/test_server_streaming_round10.py -q
+
+      - name: Run flake8
+        run: flake8 src tests
+
+      - name: Run mypy
+        run: mypy src
+
+      - name: Check Black formatting
+        run: black --check src tests --line-length=120
+
+  packaging:
+    name: Packaging and installed smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build and quality dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[quality]" build twine
+
+      - name: Build wheel and source distribution
+        run: python -m build
+
+      - name: Validate package metadata
+        run: python -m twine check dist/*
+
+      - name: Run installed smoke contracts
+        run: python -m pytest tests/test_installed_smoke.py -q

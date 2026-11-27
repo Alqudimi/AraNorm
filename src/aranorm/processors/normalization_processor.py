@@ -12,7 +12,6 @@ character transformations:
 from __future__ import annotations
 
 import re
-import unicodedata
 from typing import Optional
 
 from aranorm.core.base import Processor, ProcessorContext
@@ -21,10 +20,10 @@ from aranorm.core.base import Processor, ProcessorContext
 
 # Zero-width and invisible Unicode characters that often appear in scraped text
 _INVISIBLE = re.compile(
-    r"[\u200B\u200C\u200D\u200E\u200F"   # ZW space, ZW non-joiner/joiner, LRM, RLM
-    r"\u202A\u202B\u202C\u202D\u202E"   # embedding / override / pop
-    r"\u2060\u2061\u2062\u2063\u2064"   # word joiner, invisible operators
-    r"\uFEFF"                            # BOM / ZWNBSP
+    r"[\u200B\u200C\u200D\u200E\u200F"  # ZW space, ZW non-joiner/joiner, LRM, RLM
+    r"\u202A\u202B\u202C\u202D\u202E"  # embedding / override / pop
+    r"\u2060\u2061\u2062\u2063\u2064"  # word joiner, invisible operators
+    r"\uFEFF"  # BOM / ZWNBSP
     r"]+",
     re.UNICODE,
 )
@@ -59,7 +58,7 @@ class RedundancyProcessor(Processor):
     Example
     -------
     >>> proc = RedundancyProcessor()
-    >>> proc.process("أنا\u200B طالب\u200D")
+    >>> proc.process("أنا\u200b طالب\u200d")
     'أنا طالب'
     """
 

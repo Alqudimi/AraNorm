@@ -15,7 +15,7 @@ MENTION_PATTERN = re.compile(r"(?<!\w)@[\w\u0600-\u06FF]+")
 HASHTAG_PATTERN = re.compile(r"(?<!\w)#([^\s#]+)")
 
 # HTML tags
-HTML_PATTERN = re.compile(r"<[^>]+>")
+HTML_PATTERN = re.compile(r"<[^<>]*>")
 
 # Repeated punctuation runs (e.g., ؟؟؟ !!! ,,,)
 REPEATED_PUNCTUATION_PATTERN = re.compile(r"([!?.,،؛:؟])\1+")

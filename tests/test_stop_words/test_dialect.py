@@ -15,6 +15,7 @@ def registry() -> StopWordsRegistry:
 
 # ── DialectStopProcessor ──────────────────────────────────────────────────────
 
+
 def test_dialect_egy_removes_keda(registry: StopWordsRegistry) -> None:
     proc = DialectStopProcessor(dialects=["EGY"], registry=registry)
     result = proc.process("أنا كده سعيد")
@@ -61,6 +62,7 @@ def test_dialect_msa_words_always_removed(registry: StopWordsRegistry) -> None:
 
 # ── ArabiziStopProcessor ─────────────────────────────────────────────────────
 
+
 def test_arabizi_removes_2na(registry: StopWordsRegistry) -> None:
     proc = ArabiziStopProcessor(registry=registry)
     result = proc.process("2na 3ndy 7aga")
@@ -80,6 +82,7 @@ def test_arabizi_empty(registry: StopWordsRegistry) -> None:
 
 
 # ── InternetStopProcessor ─────────────────────────────────────────────────────
+
 
 def test_internet_removes_lol(registry: StopWordsRegistry) -> None:
     proc = InternetStopProcessor(registry=registry)

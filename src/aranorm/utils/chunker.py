@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Generator, List, Optional
+from typing import Generator, List
 
 _SENTENCE_ENDS = re.compile(r"[.!?؟…]+|\n{2,}", re.UNICODE)
 
@@ -199,6 +199,7 @@ class TextChunker:
 
 
 # ── Convenience function ───────────────────────────────────────────────────────
+
 
 def chunk_text(
     text: str,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, FrozenSet, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from aranorm.core.stop_words_config import StopWordsConfig
 from aranorm.core.stop_words_registry import StopWordsRegistry
@@ -28,38 +28,38 @@ class TextAnalysisResult:
     # Raw counts
     original_text: str
     total_tokens: int
-    total_words: int           # Arabic words only
+    total_words: int  # Arabic words only
     total_chars: int
     unique_words: int
 
     # Stop-word metrics
     stop_words_count: int
-    stop_words_ratio: float    # 0.0–1.0
+    stop_words_ratio: float  # 0.0–1.0
     content_words_count: int
     content_words_ratio: float
 
     # Content
-    content_words: List[str]   # Non-stop-word tokens (preserves order)
+    content_words: List[str]  # Non-stop-word tokens (preserves order)
     stop_words_found: Set[str]
     stop_words_by_category: Dict[str, List[str]]
 
     # Frequency
     word_frequency: Dict[str, int]
     content_word_frequency: Dict[str, int]
-    top_content_words: List[tuple]   # [(word, count), …] sorted by freq
+    top_content_words: List[tuple]  # [(word, count), …] sorted by freq
 
     # Readability indicators (heuristic)
     avg_word_length: float
-    lexical_diversity: float      # unique / total words
-    stop_word_density: float      # stop words per sentence (approx)
-    estimated_complexity: str     # "simple" | "moderate" | "complex"
+    lexical_diversity: float  # unique / total words
+    stop_word_density: float  # stop words per sentence (approx)
+    estimated_complexity: str  # "simple" | "moderate" | "complex"
 
     # Sentence stats
     sentence_count: int
-    avg_sentence_length: float    # tokens per sentence
+    avg_sentence_length: float  # tokens per sentence
 
     # Extra metadata
-    dialect_hint: Optional[str]   # detected from dialect stop words
+    dialect_hint: Optional[str]  # detected from dialect stop words
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -92,9 +92,7 @@ class TextAnalyzer:
         registry: Optional[StopWordsRegistry] = None,
         top_n: int = 10,
     ) -> None:
-        self.config = config or StopWordsConfig(
-            mode="remove", scope="universal", remove_filler=True
-        )
+        self.config = config or StopWordsConfig(mode="remove", scope="universal", remove_filler=True)
         self.registry = registry or StopWordsRegistry()
         self.processor = StopWordsProcessor(config=self.config, registry=self.registry)
         self.top_n = top_n
@@ -116,9 +114,9 @@ class TextAnalyzer:
         sw_result = self.processor.process_detailed(text)
         stop_set = sw_result.stop_words_found
         content_tokens = [
-            _clean_word(t) for t in raw_tokens
-            if _clean_word(t) and _clean_word(t) not in stop_set
-            and _ARABIC_WORD.search(t)
+            _clean_word(t)
+            for t in raw_tokens
+            if _clean_word(t) and _clean_word(t) not in stop_set and _ARABIC_WORD.search(t)
         ]
 
         # Frequency
@@ -132,9 +130,7 @@ class TextAnalyzer:
             if w:
                 content_freq[w] = content_freq.get(w, 0) + 1
 
-        top_content = sorted(content_freq.items(), key=lambda x: x[1], reverse=True)[
-            : self.top_n
-        ]
+        top_content = sorted(content_freq.items(), key=lambda x: x[1], reverse=True)[: self.top_n]
 
         # Sentence approximation (split on . ! ? ؟ ؛)
         sentences = re.split(r"[.!?؟؛\n]+", text)
@@ -225,12 +221,26 @@ class TextAnalyzer:
 
     def _empty_result(self, text: str) -> TextAnalysisResult:
         return TextAnalysisResult(
-            original_text=text, total_tokens=0, total_words=0, total_chars=0,
-            unique_words=0, stop_words_count=0, stop_words_ratio=0.0,
-            content_words_count=0, content_words_ratio=0.0, content_words=[],
-            stop_words_found=set(), stop_words_by_category={}, word_frequency={},
-            content_word_frequency={}, top_content_words=[], avg_word_length=0.0,
-            lexical_diversity=0.0, stop_word_density=0.0,
-            estimated_complexity="simple", sentence_count=0, avg_sentence_length=0.0,
+            original_text=text,
+            total_tokens=0,
+            total_words=0,
+            total_chars=0,
+            unique_words=0,
+            stop_words_count=0,
+            stop_words_ratio=0.0,
+            content_words_count=0,
+            content_words_ratio=0.0,
+            content_words=[],
+            stop_words_found=set(),
+            stop_words_by_category={},
+            word_frequency={},
+            content_word_frequency={},
+            top_content_words=[],
+            avg_word_length=0.0,
+            lexical_diversity=0.0,
+            stop_word_density=0.0,
+            estimated_complexity="simple",
+            sentence_count=0,
+            avg_sentence_length=0.0,
             dialect_hint=None,
         )

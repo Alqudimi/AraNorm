@@ -24,7 +24,7 @@ Usage
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 # ── Arabic letter inventory ────────────────────────────────────────────────────
 _ARABIC_LETTER = re.compile(r"[\u0621-\u064A]")
@@ -117,7 +117,7 @@ class RootExtractor:
             if m:
                 root_letters = extractor(m)
                 root = "".join(root_letters)
-                if len(root) == 3 and all("\u0621" <= c <= "\u064A" for c in root):
+                if len(root) == 3 and all("\u0621" <= c <= "\u064a" for c in root):
                     return root
         return None
 

@@ -41,6 +41,7 @@ pipeline = ArabicNormalizationPipeline(config: PipelineConfig)
 |--------|-----------|-------------|
 | `process` | `(text: str) -> NormalizationResult` | Normalize a single text. |
 | `process_batch` | `(texts, batch_size=32, n_workers=1, on_error=None, progress_callback=None) -> List[NormalizationResult]` | Normalize many texts, optionally in parallel. |
+| `process_iter` | `(texts, batch_size=32, n_workers=1, on_error=None, progress_callback=None) -> Iterator[NormalizationResult]` | Normalize an iterable in bounded chunks while preserving input order. |
 | `builder` | `() -> PipelineBuilder` | Start a fluent builder. |
 
 **Example**
@@ -347,7 +348,9 @@ from aranorm.utils import NormalizationCache
 cache = NormalizationCache(pipeline, maxsize=10000)
 
 result = cache.process("text")                          # single
-results = cache.process_batch(["t1", "t2"])             # batch (each cached individually)
+results = cache.process_batch(["t1", "t2"], batch_size=256, n_workers=4)  # bounded batch
+for result in cache.process_iter(open("texts.txt", encoding="utf-8"), batch_size=256, n_workers=4):
+    print(result.normalized_text)                         # streaming, bounded memory
 
 stats = cache.stats()     # → {"hits": int, "misses": int, "size": int, "maxsize": int}
 cache.clear()             # evict all cached entries
@@ -379,6 +382,24 @@ jsonl_str = exporter.to_jsonl_string()
 
 # Pandas DataFrame (requires pandas)
 df = exporter.to_dataframe()
+```
+
+---
+
+## StreamingBatchExporter
+
+Writes an iterable of normalization results incrementally to a path or an already-open text stream. Use `jsonl` for append-friendly large datasets, `csv` for spreadsheet workflows, or `json` for a valid JSON array.
+
+```python
+from aranorm.utils import StreamingBatchExporter
+
+exporter = StreamingBatchExporter(fields=["original_text", "normalized_text", "dialect"])
+count = exporter.write(
+    pipeline.process_iter(texts, batch_size=256, n_workers=4),
+    "normalized.jsonl",
+    format="jsonl",
+)
+print(count)
 ```
 
 ---

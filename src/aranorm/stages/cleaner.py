@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from aranorm.core.base import ProcessorContext
+from aranorm.core.base import Processor, ProcessorContext
 from aranorm.core.config import PipelineConfig
 from aranorm.processors import (
     EmailProcessor,
@@ -23,9 +23,9 @@ class ContentCleaner:
         self.config = config
         self.processors = self._build_processors()
 
-    def _build_processors(self) -> list:
+    def _build_processors(self) -> list[Processor]:
         """Build enabled cleaning processors in deterministic order."""
-        processors = []
+        processors: list[Processor] = []
         if self.config.clean_html:
             processors.append(HTMLProcessor())
         if self.config.clean_urls:

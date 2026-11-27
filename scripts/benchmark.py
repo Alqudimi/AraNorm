@@ -4,6 +4,7 @@ Usage:
     python scripts/benchmark.py                 # full benchmark
     python scripts/benchmark.py --quick         # quick smoke test (100 texts)
     python scripts/benchmark.py --preset deep   # specific preset only
+    python scripts/benchmark.py --stream         # benchmark bounded process_iter
 
 Example output:
     Preset 'light'    | 1000 texts | 0.42s | 2380 texts/s
@@ -80,13 +81,20 @@ _ALL_SAMPLES: List[str] = _DIALECT_SAMPLES + _MSA_SAMPLES + _SOCIAL_MEDIA_SAMPLE
 # Helpers
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def _build_corpus(n: int, base: Optional[List[str]] = None) -> List[str]:
     """Return a corpus of exactly *n* texts by cycling over *base*."""
     source = base or _ALL_SAMPLES
     return [source[i % len(source)] for i in range(n)]
 
 
-def _run_preset(preset: str, n: int, n_workers: int = 1, batch_size: int = 32) -> dict:
+def _run_preset(
+    preset: str,
+    n: int,
+    n_workers: int = 1,
+    batch_size: int = 32,
+    stream: bool = False,
+) -> dict:
     """Benchmark a single preset and return timing statistics."""
     corpus = _build_corpus(n)
     if preset == "social_media":
@@ -104,7 +112,11 @@ def _run_preset(preset: str, n: int, n_workers: int = 1, batch_size: int = 32) -
     runs = 3
     for _ in range(runs):
         t0 = time.perf_counter()
-        pipeline.process_batch(corpus, batch_size=batch_size, n_workers=n_workers)
+        if stream:
+            for _ in pipeline.process_iter(corpus, batch_size=batch_size, n_workers=n_workers):
+                pass
+        else:
+            pipeline.process_batch(corpus, batch_size=batch_size, n_workers=n_workers)
         times.append(time.perf_counter() - t0)
 
     best = min(times)
@@ -135,6 +147,7 @@ def _print_row(r: dict) -> None:
 # CLI
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="AraNorm pipeline benchmark")
     parser.add_argument("--quick", action="store_true", help="Use only 100 texts")
@@ -147,6 +160,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--n", type=int, default=1000, help="Number of texts (ignored if --quick)")
     parser.add_argument("--workers", type=int, default=1, help="Thread workers for batch")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size hint")
+    parser.add_argument(
+        "--stream", action="store_true", help="Benchmark bounded process_iter instead of materialized process_batch"
+    )
     return parser.parse_args()
 
 
@@ -155,12 +171,19 @@ def main() -> None:
     n = 100 if args.quick else args.n
     presets = ["light", "standard", "deep", "social_media"] if args.preset == "all" else [args.preset]
 
-    print(f"\nAraNorm Benchmark  (n={n}, workers={args.workers})")
+    mode = "process_iter (streaming)" if args.stream else "process_batch"
+    print(f"\nAraNorm Benchmark  (n={n}, workers={args.workers}, mode={mode})")
     _print_header()
 
     results = []
     for preset in presets:
-        r = _run_preset(preset, n=n, n_workers=args.workers, batch_size=args.batch_size)
+        r = _run_preset(
+            preset,
+            n=n,
+            n_workers=args.workers,
+            batch_size=args.batch_size,
+            stream=args.stream,
+        )
         _print_row(r)
         results.append(r)
 

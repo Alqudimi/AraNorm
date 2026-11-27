@@ -7,9 +7,7 @@ canonical ISO-4217 code or removes them entirely, depending on the mode.
 from __future__ import annotations
 
 import re
-from typing import Optional
 
-from aranorm.core.base import ProcessorContext
 from aranorm.processors._base import TextProcessor
 
 # ── Symbol → ISO code map ─────────────────────────────────────────────────────
@@ -70,13 +68,12 @@ _ARABIC_CURRENCY_MAP = {
 }
 
 # Number + currency pattern: "100 ريال" or "ريال 100"
-_NUMBER_BEFORE = re.compile(r"\b(\d[\d,\.]*)\s*(" + "|".join(re.escape(k) for k in sorted(_ARABIC_CURRENCY_MAP, key=len, reverse=True)) + r")\b")
-_NUMBER_AFTER = re.compile(r"\b(" + "|".join(re.escape(k) for k in sorted(_ARABIC_CURRENCY_MAP, key=len, reverse=True)) + r")\s*(\d[\d,\.]*)\b")
+_SORTED_CURRENCY_NAMES = "|".join(re.escape(k) for k in sorted(_ARABIC_CURRENCY_MAP, key=len, reverse=True))
+_NUMBER_BEFORE = re.compile(r"\b(\d[\d,\.]*)\s*(" + _SORTED_CURRENCY_NAMES + r")\b")
+_NUMBER_AFTER = re.compile(r"\b(" + _SORTED_CURRENCY_NAMES + r")\s*(\d[\d,\.]*)\b")
 
 # Symbol patterns
-_SYMBOL_PATTERN = re.compile(
-    "(" + "|".join(re.escape(s) for s in _SYMBOL_MAP) + r")(\d[\d,\.]*|\s*\d[\d,\.]*)"
-)
+_SYMBOL_PATTERN = re.compile("(" + "|".join(re.escape(s) for s in _SYMBOL_MAP) + r")(\d[\d,\.]*|\s*\d[\d,\.]*)")
 
 
 class CurrencyProcessor(TextProcessor):

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
 
 from aranorm.cli import main
 
@@ -119,3 +118,86 @@ class TestCLIAnalyze:
         out = capsys.readouterr().out
         data = json.loads(out)
         assert "top_words" in data
+
+
+class TestCLIBatchStreaming:
+    def test_batch_streaming_jsonl_to_output_file(self, tmp_path, capsys) -> None:
+        input_path = tmp_path / "input.txt"
+        output_path = tmp_path / "output.jsonl"
+        input_path.write_text("أحمد\n\nإبراهيم\n", encoding="utf-8")
+
+        rc = main(
+            [
+                "batch",
+                "--file",
+                str(input_path),
+                "--output",
+                str(output_path),
+                "--stream",
+                "--batch-size",
+                "1",
+                "--format",
+                "jsonl",
+            ]
+        )
+
+        assert rc == 0
+        assert "Wrote 2 results" in capsys.readouterr().out
+        rows = [json.loads(line) for line in output_path.read_text(encoding="utf-8").splitlines()]
+        assert len(rows) == 2
+        assert rows[0]["original_text"] == "أحمد"
+
+    def test_batch_streaming_json_to_stdout(self, tmp_path, capsys) -> None:
+        input_path = tmp_path / "input.txt"
+        input_path.write_text("أحمد\nإبراهيم\n", encoding="utf-8")
+
+        rc = main(["batch", "--file", str(input_path), "--stream", "--format", "json"])
+
+        assert rc == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert len(payload) == 2
+
+    def test_batch_streaming_csv_to_output_file(self, tmp_path) -> None:
+        input_path = tmp_path / "input.txt"
+        output_path = tmp_path / "output.csv"
+        input_path.write_text("أحمد\nإبراهيم\n", encoding="utf-8")
+
+        rc = main(
+            [
+                "batch",
+                "--file",
+                str(input_path),
+                "--output",
+                str(output_path),
+                "--stream",
+                "--format",
+                "csv",
+            ]
+        )
+
+        assert rc == 0
+        assert "normalized_text" in output_path.read_text(encoding="utf-8-sig")
+
+    def test_batch_empty_file_returns_error(self, tmp_path) -> None:
+        input_path = tmp_path / "empty.txt"
+        input_path.write_text("\n", encoding="utf-8")
+
+        assert main(["batch", "--file", str(input_path), "--stream"]) == 1
+
+    def test_batch_rejects_excessive_worker_count(self, tmp_path, capsys) -> None:
+        input_path = tmp_path / "input.txt"
+        input_path.write_text("أحمد\n", encoding="utf-8")
+
+        rc = main(["batch", "--file", str(input_path), "--workers", "65"])
+
+        assert rc == 1
+        assert "n_workers cannot exceed configured maximum" in capsys.readouterr().err
+
+    def test_batch_rejects_excessive_batch_size(self, tmp_path, capsys) -> None:
+        input_path = tmp_path / "input.txt"
+        input_path.write_text("أحمد\n", encoding="utf-8")
+
+        rc = main(["batch", "--file", str(input_path), "--batch-size", "10001"])
+
+        assert rc == 1
+        assert "batch_size cannot exceed configured maximum" in capsys.readouterr().err

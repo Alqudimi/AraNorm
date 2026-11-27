@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aranorm"
-version = "1.2.0"
+version = "1.15.0"
 description = "Production-grade Arabic text normalization pipeline for Modern Standard Arabic and dialects."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 authors = [
     { name = "Abdulaziz Alqudimi", email = "alqudimi@example.com" },
 ]
@@ -31,7 +31,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: Arabic",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -106,9 +105,6 @@ aranorm = [
     "py.typed",
 ]
 
-[tool.setuptools]
-license-files = ["LICENSE"]
-
 # ─── pytest ───────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -122,6 +118,7 @@ markers = [
 [tool.coverage.run]
 source = ["src/aranorm"]
 omit = ["src/aranorm/models/*", "src/aranorm/integrations/*"]
+branch = true
 
 [tool.coverage.report]
 show_missing = true
@@ -146,7 +143,7 @@ line_length = 120
 
 # ─── mypy ─────────────────────────────────────────────────────────────────────
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 check_untyped_defs = true
 disallow_untyped_defs = true
 no_implicit_optional = true

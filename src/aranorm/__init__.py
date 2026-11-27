@@ -24,6 +24,9 @@ Stop-words quick start::
 Text analysis quick start::
 
     from aranorm.analysis import TextAnalyzer, KeywordExtractor, SentimentAnalyzer
+    from aranorm.analysis.spelling_report import analyze_spelling
+    from aranorm.analysis.quality_score import analyze_quality
+    from aranorm.analysis.batch_analysis import analyze_batch
     from aranorm.utils import compute_stats, word_tokenize, stem, extract_root
 
     analyzer = TextAnalyzer()
@@ -56,17 +59,57 @@ Config serialization::
 
 from aranorm.core import (
     ArabicNormalizationPipeline,
+    BatchProcessingPolicy,
+    CancellationToken,
     DialectTarget,
     NormalizationResult,
     PipelineBuilder,
     PipelineConfig,
+    PipelineHooks,
+    ResourceLimits,
     Preset,
     Processor,
     ProcessorContext,
+    PluginDiscoveryFailure,
+    PluginDiscoveryReport,
     ProcessorFactory,
     ProcessorRegistry,
+    ProcessingMetrics,
+    ProcessingMetricsSnapshot,
     StopWordsConfig,
     StopWordsRegistry,
+    BatchRetryPolicy,
+    BatchRetryReport,
+    PipelineRuntime,
+    ReloadResult,
+    RuntimeHealth,
+    PipelineSpec,
+    PIPELINE_SPEC_SCHEMA_VERSION,
+    DEFAULT_MAX_SPEC_BYTES,
+    CHECKPOINT_SCHEMA_VERSION,
+    DEFAULT_CHECKPOINT_MAX_BYTES,
+    DEFAULT_FINGERPRINT_CHUNK_BYTES,
+    DEFAULT_SESSION_LOCK_SUFFIX,
+    StreamCheckpoint,
+    StreamingSession,
+    StreamingSessionReport,
+    fingerprint_file,
+)
+from aranorm.analysis.spelling_report import (
+    SpellingAnalyzer,
+    analyze_spelling,
+    SpellingReport,
+)
+from aranorm.analysis.quality_score import (
+    QualityScoreAnalyzer,
+    analyze_quality,
+    TextQualityScore,
+)
+from aranorm.analysis.batch_analysis import (
+    BatchAnalyzer,
+    analyze_batch,
+    BatchAnalysisReport,
+    QualityDistribution,
 )
 from aranorm.exceptions import (
     AraNormError,
@@ -77,20 +120,29 @@ from aranorm.exceptions import (
     IntegrationUnavailableError,
     InvalidTextError,
     NormalizationError,
+    ProcessingCancelledError,
     ProcessingTimeoutError,
     ProcessorNotFoundError,
+    CheckpointError,
+    StreamingSessionConflictError,
+    StreamingSessionError,
+    StreamingSourceChangedError,
 )
 
-__version__ = "1.2.0"
+__version__ = "1.15.0"
 __author__ = "AraNorm Contributors"
 __license__ = "MIT"
 
 __all__ = [
     # Pipeline
     "ArabicNormalizationPipeline",
+    "BatchProcessingPolicy",
+    "CancellationToken",
     "NormalizationResult",
     "PipelineBuilder",
     "PipelineConfig",
+    "PipelineHooks",
+    "ResourceLimits",
     "Preset",
     "DialectTarget",
     # Stop-words
@@ -99,8 +151,28 @@ __all__ = [
     # Base abstractions
     "Processor",
     "ProcessorContext",
+    "PluginDiscoveryFailure",
+    "PluginDiscoveryReport",
     "ProcessorFactory",
     "ProcessorRegistry",
+    "ProcessingMetrics",
+    "ProcessingMetricsSnapshot",
+    "BatchRetryPolicy",
+    "BatchRetryReport",
+    "PipelineRuntime",
+    "ReloadResult",
+    "RuntimeHealth",
+    "PipelineSpec",
+    "PIPELINE_SPEC_SCHEMA_VERSION",
+    "DEFAULT_MAX_SPEC_BYTES",
+    "CHECKPOINT_SCHEMA_VERSION",
+    "DEFAULT_CHECKPOINT_MAX_BYTES",
+    "DEFAULT_FINGERPRINT_CHUNK_BYTES",
+    "DEFAULT_SESSION_LOCK_SUFFIX",
+    "StreamCheckpoint",
+    "StreamingSession",
+    "StreamingSessionReport",
+    "fingerprint_file",
     # Exceptions
     "AraNormError",
     "BatchProcessingError",
@@ -110,8 +182,24 @@ __all__ = [
     "IntegrationUnavailableError",
     "InvalidTextError",
     "NormalizationError",
+    "ProcessingCancelledError",
     "ProcessingTimeoutError",
     "ProcessorNotFoundError",
+    "CheckpointError",
+    "StreamingSessionConflictError",
+    "StreamingSessionError",
+    "StreamingSourceChangedError",
+    # Advanced analysis
+    "SpellingAnalyzer",
+    "analyze_spelling",
+    "SpellingReport",
+    "QualityScoreAnalyzer",
+    "analyze_quality",
+    "TextQualityScore",
+    "BatchAnalyzer",
+    "analyze_batch",
+    "BatchAnalysisReport",
+    "QualityDistribution",
     # Version
     "__version__",
 ]

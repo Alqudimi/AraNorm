@@ -25,7 +25,7 @@ Limitations
 from __future__ import annotations
 
 import re
-from typing import Callable, FrozenSet, List, Optional, Set
+from typing import Callable, FrozenSet, List, Optional
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -33,57 +33,125 @@ from typing import Callable, FrozenSet, List, Optional, Set
 _MIN_STEM = 2
 
 # Definite article variants (including sun-letter assimilation)
-_DEFINITE_ARTICLE = re.compile(
-    r"^(ال|ال(?:ن|ر|ز|س|ش|ص|ض|ط|ظ|ل|ت|ث|د|ذ))"
-)
+_DEFINITE_ARTICLE = re.compile(r"^(ال|ال(?:ن|ر|ز|س|ش|ص|ض|ط|ظ|ل|ت|ث|د|ذ))")
 
 # Conjunctive / prepositive prefixes to strip (in order of priority)
 # Each tuple: (prefix_string, min_remaining_length)
 _PREFIXES: List[tuple] = [
     # Longest first
-    ("وال", 3), ("فال", 3), ("بال", 3), ("لل", 3), ("كال", 3),
-    ("وب", 3), ("وف", 3), ("فب", 3),
-    ("و", 3), ("ف", 3), ("ب", 3), ("ل", 3), ("ك", 3),
+    ("وال", 3),
+    ("فال", 3),
+    ("بال", 3),
+    ("لل", 3),
+    ("كال", 3),
+    ("وب", 3),
+    ("وف", 3),
+    ("فب", 3),
+    ("و", 3),
+    ("ف", 3),
+    ("ب", 3),
+    ("ل", 3),
+    ("ك", 3),
 ]
 
 # Suffixes to strip (in order of priority, longest first)
 # Each tuple: (suffix_string, min_remaining_length)
 _SUFFIXES: List[tuple] = [
     # Dual / plural morphemes
-    ("ونهم", 3), ("تهم", 3), ("ينهم", 3),
-    ("ونها", 3), ("تها", 3),
-    ("ونه", 3),  ("يته", 3),
+    ("ونهم", 3),
+    ("تهم", 3),
+    ("ينهم", 3),
+    ("ونها", 3),
+    ("تها", 3),
+    ("ونه", 3),
+    ("يته", 3),
     # Pronominal enclitics
-    ("كما", 3), ("هما", 3),
-    ("كم", 3), ("كن", 3), ("هم", 3), ("هن", 3),
-    ("ني", 3), ("نا", 3),
-    ("ها", 3), ("ه", 3), ("ك", 3), ("ي", 3),
+    ("كما", 3),
+    ("هما", 3),
+    ("كم", 3),
+    ("كن", 3),
+    ("هم", 3),
+    ("هن", 3),
+    ("ني", 3),
+    ("نا", 3),
+    ("ها", 3),
+    ("ه", 3),
+    ("ك", 3),
+    ("ي", 3),
     # Verbal agreement suffixes
-    ("ونا", 3), ("وني", 3), ("تني", 3),
-    ("تنا", 3), ("تكم", 3), ("تكن", 3),
-    ("وا", 3), ("ون", 3), ("ين", 3), ("تن", 3), ("تم", 3),
-    ("تا", 3), ("ان", 3), ("ات", 3),
+    ("ونا", 3),
+    ("وني", 3),
+    ("تني", 3),
+    ("تنا", 3),
+    ("تكم", 3),
+    ("تكن", 3),
+    ("وا", 3),
+    ("ون", 3),
+    ("ين", 3),
+    ("تن", 3),
+    ("تم", 3),
+    ("تا", 3),
+    ("ان", 3),
+    ("ات", 3),
     # Feminine marker
-    ("ة", 2), ("ه", 2),  # taa marbuta / haa in dialectal
+    ("ة", 2),
+    ("ه", 2),  # taa marbuta / haa in dialectal
     # Adverbial suffix
-    ("اً", 2), ("اٌ", 2),
+    ("اً", 2),
+    ("اٌ", 2),
     # Alef maqsura / ya
-    ("ى", 2), ("ي", 2),
+    ("ى", 2),
+    ("ي", 2),
     # Nunation (tanwin) — normalised forms
     ("اً", 2),
 ]
 
 # Words that should not be stemmed (closed-class function words)
-_STOP_STEMS: FrozenSet[str] = frozenset({
-    "في", "من", "إلى", "على", "عن", "مع", "بعد", "قبل", "عند",
-    "لدى", "لدن", "حتى", "كي", "إذا", "إذ", "حين",
-    "لأن", "لأنه", "لكن", "لكنه", "لكنها",
-    "وهو", "وهي", "وهم",
-    "أن", "إن", "أنه", "إنه",
-    "ما", "هذا", "هذه", "ذلك", "تلك",
-    "الذي", "التي", "الذين",
-    "هو", "هي", "أنا", "أنت", "نحن",
-})
+_STOP_STEMS: FrozenSet[str] = frozenset(
+    {
+        "في",
+        "من",
+        "إلى",
+        "على",
+        "عن",
+        "مع",
+        "بعد",
+        "قبل",
+        "عند",
+        "لدى",
+        "لدن",
+        "حتى",
+        "كي",
+        "إذا",
+        "إذ",
+        "حين",
+        "لأن",
+        "لأنه",
+        "لكن",
+        "لكنه",
+        "لكنها",
+        "وهو",
+        "وهي",
+        "وهم",
+        "أن",
+        "إن",
+        "أنه",
+        "إنه",
+        "ما",
+        "هذا",
+        "هذه",
+        "ذلك",
+        "تلك",
+        "الذي",
+        "التي",
+        "الذين",
+        "هو",
+        "هي",
+        "أنا",
+        "أنت",
+        "نحن",
+    }
+)
 
 
 class ArabicStemmer:
@@ -208,7 +276,7 @@ class ArabicStemmer:
         """Remove the definite article ال from the beginning of *word*."""
         match = _DEFINITE_ARTICLE.match(word)
         if match:
-            remainder = word[match.end():]
+            remainder = word[match.end() :]
             if len(remainder) >= _MIN_STEM:
                 return remainder
         return word
@@ -217,7 +285,7 @@ class ArabicStemmer:
         """Strip the longest matching prefix."""
         for prefix, min_remaining in _PREFIXES:
             if word.startswith(prefix):
-                remainder = word[len(prefix):]
+                remainder = word[len(prefix) :]
                 if len(remainder) >= min_remaining:
                     return remainder
         return word

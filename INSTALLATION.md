@@ -66,6 +66,17 @@ aranorm normalize "أهلاً وسهلاً"
 python demo.py
 ```
 
+### Optional HTTP service
+
+The standard-library HTTP adapter is opt-in and adds no mandatory dependency. Bind it to loopback for local use or place it behind a trusted production gateway that provides TLS termination, authentication, authorization, rate limiting, and access logging:
+
+```bash
+aranorm serve --host 127.0.0.1 --port 8765 --preset standard
+aranorm serve --config pipeline.json --reload-interval 1.0 --body-limit 2000000
+```
+
+The adapter exposes `/health/live`, `/health/ready`, `/v1/normalize`, `/v1/batch`, and `/v1/describe`. It enforces JSON input and a bounded request body, but it is not a substitute for an internet-facing security gateway. Configuration reload is optional; invalid updates preserve the last valid pipeline snapshot and report a degraded health state.
+
 ---
 
 ## Troubleshooting

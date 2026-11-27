@@ -17,14 +17,14 @@ ALEF_VARIANTS: List[Tuple[str, str]] = [
 HAMZA_VARIANTS: List[Tuple[str, str]] = [
     ("سؤال", "سءال"),
     ("شيئ", "شيء"),
-    ("يسأل", "يسال"),   # alef with hamza above — normalized by ALEFProcessor
+    ("يسأل", "يسال"),  # alef with hamza above — normalized by ALEFProcessor
 ]
 
 DIACRITICS_CASES: List[Tuple[str, str]] = [
     ("مَرْحَبًا", "مرحبا"),
     ("كِتَابٌ", "كتاب"),
     ("السَّلَامُ عَلَيْكُمْ", "السلام عليكم"),
-    ("قُرْآنٌ كَرِيمٌ", "قرآن كريم"),   # آ is precomposed — not a diacritic
+    ("قُرْآنٌ كَرِيمٌ", "قرآن كريم"),  # آ is precomposed — not a diacritic
 ]
 
 TATWEEL_CASES: List[Tuple[str, str]] = [
@@ -154,7 +154,7 @@ PIPELINE_CASES: List[Dict] = [
     {
         "input": "شلونك حبيبي؟ https://t.co/abc 😊 وايد زين",
         "has_no_url": True,
-        "has_no_emoji": False,   # emojis not stripped by default standard preset
+        "has_no_emoji": False,  # emojis not stripped by default standard preset
         "dialect": "GLF",
     },
     {
@@ -176,25 +176,23 @@ PIPELINE_CASES: List[Dict] = [
 # ────────────────────────────────────────────────────────────────────────────
 
 EDGE_CASES: List[str] = [
-    "",                             # empty string
-    " ",                            # whitespace only
-    "123",                          # digits only
-    "hello world",                  # Latin only
-    "مرحبا",                        # single Arabic word
-    "أ" * 1000,                     # very long repeated character
-    "مرحبا\nكيف\nحالك",            # multiline
+    "",  # empty string
+    " ",  # whitespace only
+    "123",  # digits only
+    "hello world",  # Latin only
+    "مرحبا",  # single Arabic word
+    "أ" * 1000,  # very long repeated character
+    "مرحبا\nكيف\nحالك",  # multiline
     "\t مرحبا \t كيف \t حالك \t",  # tabs and spaces
-    "،،،،،،",                       # punctuation only
-    "هههههههههههههههههه",          # laughter characters
+    "،،،،،،",  # punctuation only
+    "هههههههههههههههههه",  # laughter characters
 ]
 
 # ────────────────────────────────────────────────────────────────────────────
 # Batch processing fixtures
 # ────────────────────────────────────────────────────────────────────────────
 
-BATCH_100: List[str] = [
-    "نص عربي للاختبار رقم {}".format(i) for i in range(50)
-] + [
+BATCH_100: List[str] = ["نص عربي للاختبار رقم {}".format(i) for i in range(50)] + [
     "Arabic test text number {}".format(i) for i in range(50)
 ]
 

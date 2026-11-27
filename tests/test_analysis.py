@@ -14,11 +14,10 @@ from aranorm.analysis import (
     TextAnalysisResult,
     TextComparator,
 )
-from aranorm.core.stop_words_config import StopWordsConfig
 from aranorm.core.stop_words_registry import StopWordsRegistry
 
-
 # ── Shared fixtures ──────────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="module")
 def registry() -> StopWordsRegistry:
@@ -46,6 +45,7 @@ def corpus_analyzer(registry: StopWordsRegistry) -> CorpusAnalyzer:
 
 
 # ── TextAnalyzer ──────────────────────────────────────────────────────────────
+
 
 class TestTextAnalyzer:
     def test_returns_analysis_result(self, analyzer: TextAnalyzer) -> None:
@@ -93,6 +93,7 @@ class TestTextAnalyzer:
 
 # ── KeywordExtractor ──────────────────────────────────────────────────────────
 
+
 class TestKeywordExtractor:
     def test_returns_keyword_result(self, extractor: KeywordExtractor) -> None:
         result = extractor.extract("التعلم الآلي تقنية متقدمة في علوم الحاسوب")
@@ -134,6 +135,7 @@ class TestKeywordExtractor:
 
 
 # ── CorpusAnalyzer ────────────────────────────────────────────────────────────
+
 
 class TestCorpusAnalyzer:
     _CORPUS = [
@@ -182,6 +184,7 @@ class TestCorpusAnalyzer:
 
 # ── CorpusStopWordsBuilder ────────────────────────────────────────────────────
 
+
 class TestCorpusStopWordsBuilder:
     _CORPUS = [
         "الكتاب مفيد جداً للطالب",
@@ -218,6 +221,7 @@ class TestCorpusStopWordsBuilder:
 
 # ── TextComparator ────────────────────────────────────────────────────────────
 
+
 class TestTextComparator:
     def test_returns_similarity_result(self, comparator: TextComparator) -> None:
         result = comparator.compare("أنا سعيد اليوم", "أنا حزين اليوم")
@@ -238,12 +242,11 @@ class TestTextComparator:
 
     def test_verdict_is_valid_string(self, comparator: TextComparator) -> None:
         result = comparator.compare("أنا سعيد", "هو يعمل")
-        assert result.verdict in (
-            "identical", "very_similar", "similar", "somewhat_similar", "different"
-        )
+        assert result.verdict in ("identical", "very_similar", "similar", "somewhat_similar", "different")
 
     def test_to_dict_is_serializable(self, comparator: TextComparator) -> None:
         import json
+
         result = comparator.compare("أنا سعيد", "أنا فرحان")
         d = result.to_dict()
         serialized = json.dumps(d, ensure_ascii=False)
